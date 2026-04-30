@@ -1,7 +1,14 @@
 # =============================================================================
 # Makefile — devtool CLI
-# Gestion du cycle de vie du projet (venv, tests, build, installation)
+# Cross-platform build system (Linux + macOS)
 # =============================================================================
+
+# ---------------------------------------------------------------------------
+# OS Detection
+# Detects the operating system to handle GNU vs BSD userland differences.
+# Used for conditional behavior where Linux and macOS diverge.
+# ---------------------------------------------------------------------------
+UNAME_S := $(shell uname -s)
 
 # ---------------------------------------------------------------------------
 # Variables
@@ -13,10 +20,9 @@ PYTEST      := $(VENV)/bin/pytest
 RUFF        := $(VENV)/bin/ruff
 BLACK       := $(VENV)/bin/black
 ISORT       := $(VENV)/bin/isort
-BUILD       := $(VENV)/bin/python3 -m build
 
-# Version cible de Black déduite dynamiquement desde Python du venv
-# Ex : Python 3.12.x → --target-version py312
+# Dynamically resolve the Python version target for Black.
+# Works identically on macOS and Linux (pure Python, no shell differences).
 BLACK_TARGET := $(shell \
 	if [ -f $(PYTHON) ]; then \
 		$(PYTHON) -c "import sys; print('py{}{}'.format(sys.version_info.major, sys.version_info.minor))"; \
@@ -29,7 +35,7 @@ SRC_DIR     := devtool
 TEST_DIR    := tests
 DIST_DIR    := dist
 
-# Couleurs pour les messages dans le terminal
+# Terminal colors (ANSI — works on both macOS Terminal.app and Linux terminals)
 BOLD        := \033[1m
 GREEN       := \033[0;32m
 YELLOW      := \033[0;33m
@@ -37,183 +43,183 @@ CYAN        := \033[0;36m
 RESET       := \033[0m
 
 # ---------------------------------------------------------------------------
-# Cible par défaut
+# Default target
 # ---------------------------------------------------------------------------
-
-# Lance la création du venv et l'installation des dépendances par défaut
 .DEFAULT_GOAL := all
 
 .PHONY: all
 all: venv install-deps
-	@echo "$(GREEN)$(BOLD)✓ Environnement prêt. Activez le venv avec : source $(VENV)/bin/activate$(RESET)"
+	@echo "$(GREEN)$(BOLD)✓ Environment ready. Activate with: source $(VENV)/bin/activate$(RESET)"
 
 # ---------------------------------------------------------------------------
-# Gestion de l'environnement virtuel
+# Virtual environment management
 # ---------------------------------------------------------------------------
 
-# Crée l'environnement virtuel Python isolé
 .PHONY: venv
 venv:
-	@echo "$(CYAN)→ Création de l'environnement virtuel dans ./$(VENV)/...$(RESET)"
+	@echo "$(CYAN)→ Creating virtual environment in ./$(VENV)/...$(RESET)"
 	python3 -m venv $(VENV)
-	@echo "$(GREEN)✓ Environnement virtuel créé.$(RESET)"
+	@echo "$(GREEN)✓ Virtual environment created.$(RESET)"
 
-# Installe toutes les dépendances du projet (prod + dev/test)
 .PHONY: install-deps
 install-deps: venv
-	@echo "$(CYAN)→ Mise à jour de pip...$(RESET)"
+	@echo "$(CYAN)→ Upgrading pip...$(RESET)"
 	$(PIP) install --upgrade pip --quiet
-	@echo "$(CYAN)→ Installation des dépendances de production...$(RESET)"
+	@echo "$(CYAN)→ Installing production dependencies...$(RESET)"
 	$(PIP) install -e . --quiet
-	@echo "$(CYAN)→ Installation des dépendances de test (pytest, pytest-mock)...$(RESET)"
+	@echo "$(CYAN)→ Installing test dependencies (pytest, pytest-mock)...$(RESET)"
 	$(PIP) install -e ".[test]" --quiet
-	@echo "$(CYAN)→ Installation des outils de qualité de code (ruff, black, isort)...$(RESET)"
+	@echo "$(CYAN)→ Installing code quality tools (ruff, black, isort)...$(RESET)"
 	$(PIP) install ruff black isort --quiet
-	@echo "$(GREEN)✓ Toutes les dépendances sont installées.$(RESET)"
+	@echo "$(GREEN)✓ All dependencies installed.$(RESET)"
 
-# Lance un sous-shell avec le venv activé (WSL compatible)
+# Launch a sub-shell with the venv activated.
+# Compatible with both bash (Linux) and zsh (macOS default).
 .PHONY: shell
 shell:
-	@echo "$(YELLOW)→ Lancement d'un shell avec le venv activé...$(RESET)"
-	@echo "$(YELLOW)  Quittez avec 'exit' pour revenir à votre shell principal.$(RESET)"
-	source $(VENV)/bin/activate && exec $$SHELL
+	@echo "$(YELLOW)→ Launching a shell with the venv activated...$(RESET)"
+	@echo "$(YELLOW)  Exit with 'exit' to return to your main shell.$(RESET)"
+	@SHELL_BIN=$$(echo $$SHELL); source $(VENV)/bin/activate && exec $$SHELL_BIN
 
 # ---------------------------------------------------------------------------
-# Qualité du code
+# Code quality
 # ---------------------------------------------------------------------------
 
-# Lance le formateur Black et le vérificateur de style Ruff sur le code source
 .PHONY: lint
 lint: install-deps
-	@echo "$(CYAN)→ Version Python cible pour Black : $(BLACK_TARGET)$(RESET)"
-	@echo "$(CYAN)→ Vérification du formatage avec Black...$(RESET)"
+	@echo "$(CYAN)→ Python target version for Black: $(BLACK_TARGET)$(RESET)"
+	@echo "$(CYAN)→ Checking formatting with Black...$(RESET)"
 	$(BLACK) --check --target-version $(BLACK_TARGET) $(SRC_DIR)/
-	@echo "$(CYAN)→ Analyse statique avec Ruff...$(RESET)"
+	@echo "$(CYAN)→ Static analysis with Ruff...$(RESET)"
 	$(RUFF) check $(SRC_DIR)/
-	@echo "$(CYAN)→ Vérification des imports avec isort...$(RESET)"
+	@echo "$(CYAN)→ Checking imports with isort...$(RESET)"
 	$(ISORT) --check-only $(SRC_DIR)/
-	@echo "$(GREEN)✓ Qualité du code validée.$(RESET)"
+	@echo "$(GREEN)✓ Code quality validated.$(RESET)"
 
-# Applique automatiquement les corrections de formatage
 .PHONY: format
 format: install-deps
-	@echo "$(CYAN)→ Version Python cible pour Black : $(BLACK_TARGET)$(RESET)"
-	@echo "$(CYAN)→ Formatage automatique avec Black...$(RESET)"
+	@echo "$(CYAN)→ Python target version for Black: $(BLACK_TARGET)$(RESET)"
+	@echo "$(CYAN)→ Auto-formatting with Black...$(RESET)"
 	$(BLACK) --target-version $(BLACK_TARGET) $(SRC_DIR)/
-	@echo "$(CYAN)→ Tri des imports avec isort...$(RESET)"
+	@echo "$(CYAN)→ Sorting imports with isort...$(RESET)"
 	$(ISORT) $(SRC_DIR)/
-	@echo "$(CYAN)→ Correction automatique avec Ruff...$(RESET)"
+	@echo "$(CYAN)→ Auto-fixing with Ruff...$(RESET)"
 	$(RUFF) check --fix $(SRC_DIR)/
-	@echo "$(GREEN)✓ Formatage terminé.$(RESET)"
+	@echo "$(GREEN)✓ Formatting complete.$(RESET)"
 
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
 
-# Exécute la suite de tests via pytest
 .PHONY: test
 test: install-deps
-	@echo "$(CYAN)→ Lancement des tests avec pytest...$(RESET)"
+	@echo "$(CYAN)→ Running tests with pytest...$(RESET)"
 	$(PYTEST) $(TEST_DIR)/ -v --tb=short
-	@echo "$(GREEN)✓ Tests terminés.$(RESET)"
+	@echo "$(GREEN)✓ Tests complete.$(RESET)"
 
-# Exécute les tests avec rapport de couverture de code
 .PHONY: test-cov
 test-cov: install-deps
-	@echo "$(CYAN)→ Lancement des tests avec couverture de code...$(RESET)"
+	@echo "$(CYAN)→ Running tests with coverage report...$(RESET)"
 	$(PIP) install pytest-cov --quiet
 	$(PYTEST) $(TEST_DIR)/ -v --tb=short --cov=$(SRC_DIR) --cov-report=term-missing
-	@echo "$(GREEN)✓ Rapport de couverture généré.$(RESET)"
+	@echo "$(GREEN)✓ Coverage report generated.$(RESET)"
 
 # ---------------------------------------------------------------------------
-# Build du paquet
+# Package build
 # ---------------------------------------------------------------------------
 
-# Construit le paquet Python (wheel + sdist) dans ./dist/
 .PHONY: build
 build: install-deps
-	@echo "$(CYAN)→ Construction du paquet Python (wheel + sdist)...$(RESET)"
+	@echo "$(CYAN)→ Building Python package (wheel + sdist)...$(RESET)"
 	$(PIP) install build --quiet
 	$(PYTHON) -m build
-	@echo "$(GREEN)✓ Paquet construit dans ./$(DIST_DIR)/$(RESET)"
+	@echo "$(GREEN)✓ Package built in ./$(DIST_DIR)/$(RESET)"
 
 # ---------------------------------------------------------------------------
-# Installation locale (WSL / système)
+# Installation (cross-platform: Linux + macOS)
 # ---------------------------------------------------------------------------
 
-# Installe 'devtool' globalement pour l'utilisateur courant via pipx
-# Assure que ~/.local/bin est dans le PATH WSL
+# Install 'devtool' globally via pipx.
+# pipx works identically on Linux and macOS.
+# The PATH hint adapts to the user's default shell config file.
 .PHONY: install-local
 install-local:
-	@echo "$(CYAN)→ Installation globale de 'devtool' via pipx...$(RESET)"
+	@echo "$(CYAN)→ Installing 'devtool' globally via pipx...$(RESET)"
 	pipx install --force .
-	@echo "$(GREEN)✓ 'devtool' installé globalement. Testez avec : devtool --help$(RESET)"
-	@echo "$(YELLOW)  Si la commande est introuvable, ajoutez ceci à votre ~/.bashrc :$(RESET)"
+	@echo "$(GREEN)✓ 'devtool' installed globally. Test with: devtool --help$(RESET)"
+ifeq ($(UNAME_S),Darwin)
+	@echo "$(YELLOW)  If command not found, add to your ~/.zshrc:$(RESET)"
+else
+	@echo "$(YELLOW)  If command not found, add to your ~/.bashrc:$(RESET)"
+endif
 	@echo '      export PATH="$$HOME/.local/bin:$$PATH"'
 
-# Alternative : installation en mode développement (pip install -e .) dans le venv
 .PHONY: install-dev
 install-dev: venv
-	@echo "$(CYAN)→ Installation en mode éditable dans le venv (pip install -e .)...$(RESET)"
+	@echo "$(CYAN)→ Installing in editable mode (pip install -e .)...$(RESET)"
 	$(PIP) install -e ".[test]"
-	@echo "$(GREEN)✓ 'devtool' installé en mode développement dans le venv.$(RESET)"
-	@echo "$(YELLOW)  Activez le venv pour utiliser la commande : source $(VENV)/bin/activate$(RESET)"
+	@echo "$(GREEN)✓ 'devtool' installed in development mode.$(RESET)"
+	@echo "$(YELLOW)  Activate the venv to use: source $(VENV)/bin/activate$(RESET)"
 
-# Désinstalle 'devtool' de l'installation globale pipx
 .PHONY: uninstall
 uninstall:
-	@echo "$(CYAN)→ Désinstallation de 'devtool'...$(RESET)"
+	@echo "$(CYAN)→ Uninstalling 'devtool'...$(RESET)"
 	pipx uninstall $(PACKAGE) || pip3 uninstall -y $(PACKAGE)
-	@echo "$(GREEN)✓ 'devtool' désinstallé.$(RESET)"
+	@echo "$(GREEN)✓ 'devtool' uninstalled.$(RESET)"
 
 # ---------------------------------------------------------------------------
-# Nettoyage
+# Clean
 # ---------------------------------------------------------------------------
+# Cross-platform clean target.
+# - Uses `find ... -print0 | xargs -0` which is portable across GNU and BSD find.
+# - Avoids GNU-only `-not` syntax; uses `!` which works on both.
+# - Removes .DS_Store (macOS) alongside Python artifacts.
+# - All commands are guarded with `|| true` / `2>/dev/null` to never fail.
 
-# Supprime le venv, les caches, les artefacts de build et les fichiers temporaires
 .PHONY: clean
 clean:
-	@echo "$(CYAN)→ Suppression de l'environnement virtuel...$(RESET)"
+	@echo "$(CYAN)→ Removing virtual environment...$(RESET)"
 	rm -rf $(VENV)
-	@echo "$(CYAN)→ Suppression des caches Python...$(RESET)"
-	find . -type d -name "__pycache__" -not -path "./.git/*" -exec rm -rf {} + 2>/dev/null || true
-	find . -type f -name "*.pyc" -not -path "./.git/*" -delete 2>/dev/null || true
-	find . -type f -name "*.pyo" -not -path "./.git/*" -delete 2>/dev/null || true
-	@echo "$(CYAN)→ Suppression des artefacts de build...$(RESET)"
+	@echo "$(CYAN)→ Removing Python caches...$(RESET)"
+	find . -type d -name "__pycache__" ! -path "./.git/*" -print0 2>/dev/null | xargs -0 rm -rf 2>/dev/null || true
+	find . -type f -name "*.pyc" ! -path "./.git/*" -print0 2>/dev/null | xargs -0 rm -f 2>/dev/null || true
+	find . -type f -name "*.pyo" ! -path "./.git/*" -print0 2>/dev/null | xargs -0 rm -f 2>/dev/null || true
+	@echo "$(CYAN)→ Removing build artifacts...$(RESET)"
 	rm -rf $(DIST_DIR)/ build/ *.egg-info/ src/*.egg-info/
-	@echo "$(CYAN)→ Suppression des fichiers de couverture de test...$(RESET)"
+	@echo "$(CYAN)→ Removing test and lint caches...$(RESET)"
 	rm -rf .coverage htmlcov/ .pytest_cache/ .ruff_cache/
-	@echo "$(GREEN)✓ Projet nettoyé.$(RESET)"
+	@echo "$(CYAN)→ Removing OS artifacts...$(RESET)"
+	find . -type f -name ".DS_Store" -print0 2>/dev/null | xargs -0 rm -f 2>/dev/null || true
+	@echo "$(GREEN)✓ Project cleaned.$(RESET)"
 
 # ---------------------------------------------------------------------------
-# Aide
+# Help
 # ---------------------------------------------------------------------------
 
-# Affiche la liste des cibles disponibles et leur description
 .PHONY: help
 help:
 	@echo ""
-	@echo "$(BOLD)devtool — Cibles Makefile disponibles$(RESET)"
+	@echo "$(BOLD)devtool — Available Makefile targets$(RESET)"
 	@echo "─────────────────────────────────────────────"
-	@echo "$(CYAN)Environnement :$(RESET)"
-	@echo "  make venv           Crée l'environnement virtuel Python"
-	@echo "  make install-deps   Installe toutes les dépendances (prod + test + lint)"
-	@echo "  make shell          Lance un sous-shell avec le venv activé"
+	@echo "$(CYAN)Environment:$(RESET)"
+	@echo "  make venv           Create Python virtual environment"
+	@echo "  make install-deps   Install all dependencies (prod + test + lint)"
+	@echo "  make shell          Launch a sub-shell with the venv activated"
 	@echo ""
-	@echo "$(CYAN)Qualité du code :$(RESET)"
-	@echo "  make lint           Vérifie le style (black, ruff, isort)"
-	@echo "  make format         Applique le formatage automatique"
+	@echo "$(CYAN)Code Quality:$(RESET)"
+	@echo "  make lint           Check style (black, ruff, isort)"
+	@echo "  make format         Apply automatic formatting"
 	@echo ""
-	@echo "$(CYAN)Tests :$(RESET)"
-	@echo "  make test           Lance la suite de tests (pytest)"
-	@echo "  make test-cov       Lance les tests avec rapport de couverture"
+	@echo "$(CYAN)Tests:$(RESET)"
+	@echo "  make test           Run test suite (pytest)"
+	@echo "  make test-cov       Run tests with coverage report"
 	@echo ""
-	@echo "$(CYAN)Build & Installation :$(RESET)"
-	@echo "  make build          Construit le paquet Python (wheel + sdist)"
-	@echo "  make install-local  Installe 'devtool' globalement via pipx"
-	@echo "  make install-dev    Installe en mode développement dans le venv"
-	@echo "  make uninstall      Désinstalle 'devtool' du système"
+	@echo "$(CYAN)Build & Install:$(RESET)"
+	@echo "  make build          Build Python package (wheel + sdist)"
+	@echo "  make install-local  Install 'devtool' globally via pipx"
+	@echo "  make install-dev    Install in development mode (editable)"
+	@echo "  make uninstall      Uninstall 'devtool' from the system"
 	@echo ""
-	@echo "$(CYAN)Nettoyage :$(RESET)"
-	@echo "  make clean          Supprime venv, caches et artefacts de build"
+	@echo "$(CYAN)Cleanup:$(RESET)"
+	@echo "  make clean          Remove venv, caches, build artifacts, .DS_Store"
 	@echo ""
