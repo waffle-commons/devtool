@@ -9,19 +9,16 @@ import typer
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeRemainingColumn
 
-from ..config import load_config
-from ..utils import ollama_client
+from ..container import get_config, get_generation_service, get_rag_service
 from ..utils.path_utils import _IGNORE_DIRS
 from ..utils.language_utils import LANGUAGE_MAPPING
-from ..services import rag_service
+from ..services.rag_service import VECTORSTORE_DIR, METADATA_FILE
 from ..stream import OllamaStreamProcessor
 from ..view import ReviewRenderer
 
 console = Console()
-app = typer.Typer()
 
 
-@app.command("repo-analysis")
 def repo_analysis_cmd(
     target_dir: str = typer.Argument(".", help="Directory to analyze (default: current directory)"),
     use_rag: bool = typer.Option(
@@ -31,7 +28,9 @@ def repo_analysis_cmd(
     ),
 ) -> None:
     """Run a holistic architectural audit of the entire repository."""
-    config = load_config()
+    config = get_config()
+    gen_service = get_generation_service()
+    rag_svc = get_rag_service()
     target = Path(target_dir).resolve()
 
     if not target.exists() or not target.is_dir():
@@ -42,7 +41,7 @@ def repo_analysis_cmd(
 
     # ── RAG-accelerated path ─────────────────────────────────────────────
     if use_rag:
-        if not rag_service.has_index(target_dir):
+        if not rag_svc.has_index(target_dir):
             console.print(
                 "[yellow]--use-rag was set but no index found. Run `devtool index` first. "
                 "Falling back to brute-force Map-Reduce.[/yellow]\n"
@@ -74,7 +73,7 @@ def repo_analysis_cmd(
             task = progress.add_task("[cyan]Sampling domain chunks...", total=len(_PROBES))
             for probe in _PROBES:
                 progress.update(task, description=f"[cyan]Probing: {probe[:50]}...")
-                results = rag_service.search(probe, config, target_dir=target_dir, top_k=5)
+                results = rag_svc.search(probe, target_dir=target_dir, top_k=5)
                 for r in results:
                     text_key = r["text"][:100]
                     if text_key not in seen_texts:
@@ -88,7 +87,7 @@ def repo_analysis_cmd(
 
         all_summaries = "\n\n".join(sampled_chunks)
 
-        meta_path = Path(target_dir).resolve() / rag_service.VECTORSTORE_DIR / rag_service.METADATA_FILE
+        meta_path = Path(target_dir).resolve() / VECTORSTORE_DIR / METADATA_FILE
         try:
             with open(meta_path, encoding="utf-8") as f:
                 meta: list[dict[str, str]] = json.load(f)
@@ -157,7 +156,7 @@ def repo_analysis_cmd(
                     if len(content) > 30000:
                         content = content[:30000] + "\n...[truncated]"
 
-                    summary = ollama_client.summarize_file(content, config)
+                    summary = gen_service.summarize_file(content)
                     if summary:
                         file_summaries.append(f"### {rel_path}\n{summary}")
                     else:
@@ -193,10 +192,9 @@ def repo_analysis_cmd(
             f"(num_ctx={config.num_ctx}).[/bold yellow]\n"
         )
 
-    raw_stream = ollama_client.repo_architect_stream(
+    raw_stream = gen_service.repo_architect_stream(
         tree=tree_structure,
         summaries=all_summaries,
-        config=config
     )
 
     state_generator = OllamaStreamProcessor().process(raw_stream)

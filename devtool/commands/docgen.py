@@ -8,19 +8,18 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from ..config import load_config
-from ..utils import git_utils, ollama_client
+from ..container import get_config
+from ..utils import git_utils
 from ..utils.path_utils import collect_source_files
 from ..utils.language_utils import LANGUAGE_MAPPING, detect_language_from_dir
 from ..utils.docgen_utils import DocType, DOC_TYPE_LABELS, ALL_DOC_TYPES, run_single_docgen
 from ..stream import OllamaStreamProcessor
 from ..view import ReviewRenderer
+from ..utils import ollama_client
 
 console = Console()
-app = typer.Typer()
 
 
-@app.command("docgen")
 def docgen_cmd(
     target: Optional[Path] = typer.Argument(
         None, help="File or directory to document (default: current directory)"
@@ -44,7 +43,7 @@ def docgen_cmd(
 
     Omit --type to run in Complete Mode and generate all four quadrants at once.
     """
-    config = load_config()
+    config = get_config()
 
     # ── 1. Collect source code ───────────────────────────────────────────────
     root = target or Path(".")

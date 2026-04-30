@@ -46,3 +46,19 @@ def get_rag_service():
         embedder=get_embedding_model(),
         store=get_index_store(),
     )
+
+
+@lru_cache(maxsize=1)
+def get_generation_service():
+    """Return a fully-wired GenerationService with purpose-routed models.
+
+    Uses lru_cache to avoid re-creating models on every command call.
+    """
+    from .services.generation_service import GenerationService
+
+    return GenerationService(
+        fast_model=get_language_model("fast"),
+        coding_model=get_language_model("coding"),
+        review_model=get_language_model("review"),
+        default_model=get_language_model("default"),
+    )

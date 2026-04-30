@@ -5,23 +5,24 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from ..config import load_config
-from ..utils import ollama_client
+from ..container import get_config, get_language_model
 
 console = Console()
-app = typer.Typer()
 
 
-@app.command("debug-ollama")
 def debug_ollama_cmd() -> None:
     """Diagnose the Ollama connection and verify that the configured model is installed."""
-    config = load_config()
+    config = get_config()
+    llm = get_language_model("default")
 
     console.print(
         Panel.fit(
             f"Endpoint: [cyan]{config.ollama_endpoint}[/cyan]\n"
-            f"Configured model: [bold]{config.ollama_model}[/bold]\n"
-            f"Embedding model: [bold]{config.embedding_model}[/bold]",
+            f"Default model: [bold]{config.ollama_model}[/bold]\n"
+            f"Embedding model: [bold]{config.resolve_model('embedding')}[/bold]\n"
+            f"Fast model: [bold]{config.resolve_model('fast')}[/bold]\n"
+            f"Coding model: [bold]{config.resolve_model('coding')}[/bold]\n"
+            f"Review model: [bold]{config.resolve_model('review')}[/bold]",
             title="[bold blue]Ollama Configuration[/bold blue]",
         )
     )
@@ -29,7 +30,7 @@ def debug_ollama_cmd() -> None:
     console.print(
         "\n[blue]Connecting to Ollama and fetching installed models...[/blue]"
     )
-    models = ollama_client.list_models(config)
+    models = llm.list_models()
 
     if models is None:
         raise typer.Exit(code=1)
@@ -57,27 +58,40 @@ def debug_ollama_cmd() -> None:
 
     console.print(table)
 
-    configured = config.ollama_model.split(":")[0].lower()
-    matched = [n for n in installed_names if n.split(":")[0].lower() == configured]
+    # Check all configured models
+    configured_models = {
+        "default": config.ollama_model,
+        "fast": config.resolve_model("fast"),
+        "coding": config.resolve_model("coding"),
+        "review": config.resolve_model("review"),
+    }
 
-    if matched:
+    all_ok = True
+    for purpose, model_name in configured_models.items():
+        base_name = model_name.split(":")[0].lower()
+        matched = [n for n in installed_names if n.split(":")[0].lower() == base_name]
+
+        if matched:
+            console.print(
+                f"  [green]✓[/green] [bold]{purpose}[/bold] → {model_name} [dim](found as {matched[0]})[/dim]"
+            )
+        else:
+            console.print(
+                f"  [red]✗[/red] [bold]{purpose}[/bold] → {model_name} [red]NOT INSTALLED[/red]"
+            )
+            all_ok = False
+
+    if all_ok:
         console.print(
-            f"\n[bold green]Model '{config.ollama_model}' found as: {matched[0]}[/bold green]"
+            "\n[bold green]All configured models are available.[/bold green]"
         )
     else:
         console.print(
-            f"\n[bold red]Model '{config.ollama_model}' is NOT installed.[/bold red]"
+            "\n[bold red]Some models are missing. Install them with:[/bold red]"
         )
-        console.print(
-            "  -> Available models listed above. Update your [cyan].devtool.toml[/cyan] or run:"
-        )
-        console.print(f"    [bold]ollama pull {config.ollama_model}[/bold]")
-        if "gemma" in configured:
-            console.print(
-                "\n[yellow]Hint:[/yellow] Ollama uses tags like [bold]gemma:2b[/bold], "
-                "[bold]gemma:7b[/bold], [bold]gemma2[/bold] — not 'gemma4'."
-            )
-            console.print(
-                "  -> Run [bold]ollama list[/bold] in your shell to see exact names."
-            )
+        for purpose, model_name in configured_models.items():
+            base_name = model_name.split(":")[0].lower()
+            matched = [n for n in installed_names if n.split(":")[0].lower() == base_name]
+            if not matched:
+                console.print(f"  [bold]ollama pull {model_name}[/bold]")
         raise typer.Exit(code=1)

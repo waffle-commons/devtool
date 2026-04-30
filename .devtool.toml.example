@@ -1,14 +1,20 @@
 [ollama]
 endpoint = "http://localhost:11434"
-model = "gemma4:latest"
-embedding_model = "qwen3-embedding:latest"
 show_thoughts = true
-request_timeout = 600
-num_ctx = 16384
+request_timeout = 300
+num_ctx = 8192
+keep_alive = "10m"
+num_ctx_fast = 4096
+num_ctx_coding = 8192
+num_ctx_review = 12288
+num_predict_fast = 512
+num_predict_coding = 4096
+num_predict_review = 4096
+num_predict_default = 4096
 
 [models]
-default   = "gemma4:latest"
+default   = "gemma3n:e4b"
 coding    = "qwen3-coder:latest"
-fast      = "qwen3:0.6b"
-review    = "gemma4:31b"
-embedding = "qwen3-embedding:latest"
+fast      = "qwen3.5:0.8b"
+review    = "qwen3-coder:latest"
+embedding = "nomic-embed-text"

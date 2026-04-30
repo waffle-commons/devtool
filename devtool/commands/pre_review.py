@@ -5,17 +5,15 @@ from typing import Optional
 import typer
 from rich.console import Console
 
-from ..config import load_config
-from ..utils import git_utils, ollama_client
-from ..services import rag_service
+from ..container import get_config, get_generation_service
+from ..utils import git_utils
 from ..stream import OllamaStreamProcessor
 from ..view import ReviewRenderer
+from ._rag_helpers import fetch_rag_context
 
 console = Console()
-app = typer.Typer()
 
 
-@app.command("pre-review")
 def pre_review_cmd(
     target_branch: Optional[str] = typer.Option(
         None,
@@ -35,7 +33,8 @@ def pre_review_cmd(
     ),
 ) -> None:
     """Analyze the current branch against a target branch for code smells and SOLID violations."""
-    config = load_config()
+    config = get_config()
+    gen_service = get_generation_service()
 
     if target_branch:
         console.print(
@@ -87,30 +86,15 @@ def pre_review_cmd(
     # ── RAG context injection ────────────────────────────────────────────
     rag_context: Optional[str] = None
     if use_rag:
-        if rag_service.has_index():
-            console.print(
-                "[dim cyan]Fetching architectural context from RAG index...[/dim cyan]"
-            )
-            query = f"Classes, interfaces, and modules related to: {diff[:500]}"
-            results = rag_service.search(query, config, top_k=5)
-            rag_context = rag_service.format_rag_context(results)
-            if rag_context:
-                console.print(
-                    f"[dim cyan]Injected {len(results)} context chunk(s) from the RAG index.[/dim cyan]"
-                )
-            else:
-                console.print(
-                    "[yellow]RAG search returned no relevant chunks.[/yellow]"
-                )
-        else:
-            console.print(
-                "[yellow]--use-rag was set but no index found. Run `devtool index` first. Continuing without RAG.[/yellow]"
-            )
+        query = f"Classes, interfaces, and modules related to: {diff[:500]}"
+        rag_context = fetch_rag_context(
+            query, console, label="architectural context"
+        )
 
     console.print("\n[bold magenta]Code Review Results:[/bold magenta]\n")
 
-    raw_stream = ollama_client.pre_review_code_stream(
-        diff, config, rag_context=rag_context, fix_mode=fix,
+    raw_stream = gen_service.pre_review_stream(
+        diff, rag_context=rag_context, fix_mode=fix,
     )
     state_generator = OllamaStreamProcessor().process(raw_stream)
 

@@ -27,10 +27,12 @@ class TestLoadConfig:
         toml_content = b"""
 [ollama]
 endpoint = "http://custom:1234"
-model = "custom-model"
-embedding_model = "custom-embed"
 show_thoughts = false
 request_timeout = 60
+
+[models]
+default = "custom-model"
+embedding = "custom-embed"
 """
         (tmp_path / ".devtool.toml").write_bytes(toml_content)
         monkeypatch.chdir(tmp_path)
@@ -44,8 +46,8 @@ request_timeout = 60
 
     def test_load_config_partial_toml(self, tmp_path, monkeypatch):
         toml_content = b"""
-[ollama]
-model = "partial-model"
+[models]
+default = "partial-model"
 """
         (tmp_path / ".devtool.toml").write_bytes(toml_content)
         monkeypatch.chdir(tmp_path)
@@ -62,3 +64,22 @@ model = "partial-model"
 
         config = load_config()
         assert config.ollama_model == "gemma4"  # falls back to default
+
+    def test_deprecated_model_in_ollama_warns(self, tmp_path, monkeypatch, capsys):
+        """Model keys in [ollama] are deprecated and should emit a warning."""
+        toml_content = b"""
+[ollama]
+model = "old-style-model"
+embedding_model = "old-embed"
+
+[models]
+default = "correct-model"
+"""
+        (tmp_path / ".devtool.toml").write_bytes(toml_content)
+        monkeypatch.chdir(tmp_path)
+
+        config = load_config()
+        # [models] takes precedence; deprecated keys are ignored
+        assert config.ollama_model == "correct-model"
+        captured = capsys.readouterr()
+        assert "deprecated" in captured.err

@@ -1,22 +1,16 @@
 """RAG commands: index the codebase and ask semantic questions."""
 
-from typing import Optional
-
 import typer
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, MofNCompleteColumn
 
-from ..config import load_config
-from ..services import rag_service
-from ..utils import ollama_client
+from ..container import get_config, get_generation_service, get_rag_service
 from ..stream import OllamaStreamProcessor
 from ..view import ReviewRenderer
 
 console = Console()
-app = typer.Typer()
 
 
-@app.command("index")
 def index_cmd(
     target: str = typer.Argument(
         default=".",
@@ -30,11 +24,12 @@ def index_cmd(
     ),
 ) -> None:
     """Build (or rebuild) a local FAISS vector index of the codebase."""
-    config = load_config()
+    config = get_config()
+    rag_svc = get_rag_service()
 
     if update:
         # ── Incremental update path ──────────────────────────────────────
-        if not rag_service.has_index(target):
+        if not rag_svc.has_index(target):
             console.print(
                 "[red]No existing index found. Run `devtool index` without --update first.[/red]"
             )
@@ -58,9 +53,8 @@ def index_cmd(
                 progress.update(task_id, total=total, completed=current, description=f"Embedding [cyan]{filename}[/cyan]")
 
             try:
-                added, removed, unchanged = rag_service.update_index(
+                added, removed, unchanged = rag_svc.update_index(
                     target_dir=target,
-                    config=config,
                     progress_callback=_on_update_progress,
                 )
             except FileNotFoundError as exc:
@@ -93,9 +87,8 @@ def index_cmd(
         def _on_progress(current: int, total: int, filename: str) -> None:
             progress.update(task_id, total=total, completed=current, description=f"Embedding [cyan]{filename}[/cyan]")
 
-        total_chunks = rag_service.build_index(
+        total_chunks = rag_svc.build_index(
             target_dir=target,
-            config=config,
             progress_callback=_on_progress,
         )
 
@@ -109,7 +102,6 @@ def index_cmd(
     )
 
 
-@app.command("ask")
 def ask_cmd(
     question: str = typer.Argument(
         ...,
@@ -129,14 +121,15 @@ def ask_cmd(
     ),
 ) -> None:
     """Ask a semantic question against the indexed codebase."""
-    config = load_config()
+    config = get_config()
+    rag_svc = get_rag_service()
+    gen_service = get_generation_service()
 
     console.print(f"[blue]Searching index for: [bold]{question}[/bold][/blue]\n")
 
     try:
-        results = rag_service.search(
+        results = rag_svc.search(
             query=question,
-            config=config,
             target_dir=target,
             top_k=top_k,
         )
@@ -156,23 +149,11 @@ def ask_cmd(
         )
     context_block = "\n\n".join(context_parts)
 
-    system_prompt = (
-        "You are a senior software engineer answering questions about a codebase. "
-        "Use ONLY the provided code context to answer. If the context is insufficient, say so. "
-        "Be concise and reference file paths when relevant."
-    )
-
-    prompt = (
-        f"[RETRIEVED CODE CONTEXT]\n{context_block}\n\n"
-        f"[QUESTION]\n{question}"
-    )
-
     console.print(f"[blue]Generating answer from Ollama ({config.ollama_model})...[/blue]\n")
 
-    raw_stream = ollama_client.stream_generate(
-        prompt=prompt,
-        system=system_prompt,
-        config=config,
+    raw_stream = gen_service.rag_ask_stream(
+        question=question,
+        context_block=context_block,
     )
     state_generator = OllamaStreamProcessor().process(raw_stream)
 

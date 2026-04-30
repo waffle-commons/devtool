@@ -9,6 +9,7 @@ from rich.console import Console
 from . import ollama_client
 from ..stream import OllamaStreamProcessor
 from ..view import ReviewRenderer
+from ..container import get_config
 
 console = Console()
 
@@ -38,12 +39,15 @@ def run_single_docgen(
     stem: str,
     output_dir: Path,
     context_hint: str,
-    config: object,
+    config: object = None,
 ) -> dict:
     """Generate (or update) a single Diataxis document and auto-save it.
 
     Returns a result dict: {type, path, status} for the summary table.
     """
+    if config is None:
+        config = get_config()
+
     doc_label = DOC_TYPE_LABELS[type_key]
     dest_path = output_dir / type_key / f"{stem}.md"
 

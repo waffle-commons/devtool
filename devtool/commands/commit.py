@@ -1,22 +1,19 @@
 """commit command — generate AI-powered commit messages from staged changes."""
 
-from typing import Optional
-
 import click
 import typer
 from rich.console import Console
 
-from ..config import load_config
-from ..utils import git_utils, ollama_client
+from ..container import get_config, get_generation_service
+from ..utils import git_utils
 
 console = Console()
-app = typer.Typer()
 
 
-@app.command("commit")
 def commit_cmd() -> None:
     """Analyze staged changes and generate a commit message using local Ollama."""
-    config = load_config()
+    config = get_config()
+    gen_service = get_generation_service()
 
     console.print("[blue]Staging all changes (git add .)...[/blue]")
     if not git_utils.stage_all():
@@ -35,7 +32,7 @@ def commit_cmd() -> None:
         raise typer.Exit(code=1)
 
     console.print(
-        f"[blue]Analyzing staged changes with Ollama ({config.ollama_model} → {config.resolve_model('fast')})...[/blue]"
+        f"[blue]Analyzing staged changes with Ollama ({config.resolve_model('fast')})...[/blue]"
     )
 
     diff, was_truncated = git_utils.truncate_diff(diff)
@@ -48,12 +45,12 @@ def commit_cmd() -> None:
         "[dim]Waiting for Ollama to process (this may take a while if the model is loading)...[/dim]",
         spinner="dots",
     ):
-        commit_msg = ollama_client.generate_commit_message(diff, config)
+        commit_msg = gen_service.generate_commit_message(diff)
 
     if not commit_msg:
         console.print(
             f"[red]Error: Failed to generate commit message. Ensure Ollama is running "
-            f"(`{config.ollama_endpoint}`) and model `{config.ollama_model}` is available.[/red]"
+            f"(`{config.ollama_endpoint}`) and model `{config.resolve_model('fast')}` is available.[/red]"
         )
         raise typer.Exit(code=1)
 

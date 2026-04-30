@@ -6,18 +6,16 @@ from typing import Optional
 import typer
 from rich.console import Console
 
-from ..config import load_config
-from ..utils import git_utils, ollama_client
+from ..container import get_config, get_generation_service
+from ..utils import git_utils
 from ..utils.path_utils import collect_source_files
-from ..services import rag_service
 from ..stream import OllamaStreamProcessor
 from ..view import ReviewRenderer
+from ._rag_helpers import fetch_rag_context
 
 console = Console()
-app = typer.Typer()
 
 
-@app.command("sec-audit")
 def sec_audit_cmd(
     path: Optional[Path] = typer.Argument(
         None, help="File or directory to audit (default: current directory)"
@@ -37,7 +35,8 @@ def sec_audit_cmd(
     ),
 ) -> None:
     """Run an OWASP-focused security audit against a file, directory, or staged git diff."""
-    config = load_config()
+    config = get_config()
+    gen_service = get_generation_service()
 
     # ── 1. Gather the code/diff to audit ────────────────────────────────────
     if staged:
@@ -94,31 +93,16 @@ def sec_audit_cmd(
     # ── RAG cross-file context injection ─────────────────────────────────
     rag_context: Optional[str] = None
     if use_rag:
-        if rag_service.has_index():
-            console.print(
-                "[dim cyan]Fetching cross-file usage context from RAG index...[/dim cyan]"
-            )
-            code_snippet = code[:500].replace("\n", " ").strip()
-            query = f"Callers, usages, or inputs to: {code_snippet}"
-            results = rag_service.search(query, config, top_k=5)
-            rag_context = rag_service.format_rag_context(results)
-            if rag_context:
-                console.print(
-                    f"[dim cyan]Injected {len(results)} cross-file context chunk(s) for source-to-sink analysis.[/dim cyan]"
-                )
-            else:
-                console.print(
-                    "[yellow]RAG search returned no relevant cross-file context.[/yellow]"
-                )
-        else:
-            console.print(
-                "[yellow]--use-rag was set but no index found. Run `devtool index` first. Continuing without RAG.[/yellow]"
-            )
+        code_snippet = code[:500].replace("\n", " ").strip()
+        query = f"Callers, usages, or inputs to: {code_snippet}"
+        rag_context = fetch_rag_context(
+            query, console, label="cross-file usage context"
+        )
 
     console.print("[bold magenta]Security Audit Results:[/bold magenta]\n")
 
-    raw_stream = ollama_client.sec_audit_stream(
-        code, config, rag_context=rag_context, fix_mode=fix,
+    raw_stream = gen_service.sec_audit_stream(
+        code, rag_context=rag_context, fix_mode=fix,
     )
     state_generator = OllamaStreamProcessor().process(raw_stream)
     view = ReviewRenderer(config, console)
