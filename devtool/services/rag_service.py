@@ -36,9 +36,27 @@ _IGNORE_DIRS: frozenset[str] = frozenset(
 
 _SOURCE_EXTENSIONS: frozenset[str] = frozenset(
     {
-        ".py", ".php", ".cs", ".ts", ".js", ".java", ".kt", ".go",
-        ".rb", ".rs", ".c", ".cpp", ".h", ".jsx", ".tsx", ".vue",
-        ".yaml", ".yml", ".toml", ".json", ".md",
+        ".py",
+        ".php",
+        ".cs",
+        ".ts",
+        ".js",
+        ".java",
+        ".kt",
+        ".go",
+        ".rb",
+        ".rs",
+        ".c",
+        ".cpp",
+        ".h",
+        ".jsx",
+        ".tsx",
+        ".vue",
+        ".yaml",
+        ".yml",
+        ".toml",
+        ".json",
+        ".md",
     }
 )
 
@@ -148,7 +166,12 @@ class RAGService:
             for idx, chunk in enumerate(chunks):
                 all_chunks.append(chunk)
                 metadata.append(
-                    {"file": relative, "chunk_index": idx, "text": chunk, "mtime": file_mtime}
+                    {
+                        "file": relative,
+                        "chunk_index": idx,
+                        "text": chunk,
+                        "mtime": file_mtime,
+                    }
                 )
 
         if not all_chunks:
@@ -201,7 +224,9 @@ class RAGService:
             if rel not in old_mtimes or current_mtime > old_mtimes[rel]:
                 new_or_changed.append(rel)
 
-        unchanged_files: set[str] = set(current_files.keys()) - set(new_or_changed) - deleted_files
+        unchanged_files: set[str] = (
+            set(current_files.keys()) - set(new_or_changed) - deleted_files
+        )
 
         # Keep vectors for unchanged files
         kept_indices: list[int] = []
@@ -225,7 +250,12 @@ class RAGService:
             for idx, chunk in enumerate(chunks):
                 new_chunks.append(chunk)
                 new_metadata.append(
-                    {"file": rel, "chunk_index": idx, "text": chunk, "mtime": file_mtime}
+                    {
+                        "file": rel,
+                        "chunk_index": idx,
+                        "text": chunk,
+                        "mtime": file_mtime,
+                    }
                 )
 
         new_embeddings: list[list[float]] = []
@@ -294,7 +324,7 @@ _default_service: Optional[RAGService] = None
 def _get_default_service() -> RAGService:
     global _default_service
     if _default_service is None:
-        from ..config import Config, load_config
+        from ..config import load_config
         from ..utils.ollama_client import OllamaEmbeddingModel
         from .faiss_store import FaissIndexStore
 

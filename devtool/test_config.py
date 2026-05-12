@@ -1,4 +1,5 @@
 import tomllib
+
 # Assuming the source code is saved in a module named 'config_loader'
 # For testing purposes, we need to import the necessary components
 from dataclasses import dataclass

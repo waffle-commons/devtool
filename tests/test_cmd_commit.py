@@ -1,12 +1,11 @@
 """Tests for devtool.commands.commit — commit command."""
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-import pytest
 from typer.testing import CliRunner
 
-from devtool.main import app
 from devtool.config import Config
+from devtool.main import app
 
 runner = CliRunner()
 
@@ -46,7 +45,9 @@ class TestCommitCommand:
         mock_svc = _make_gen_service_mock()
         with (
             patch("devtool.commands.commit.git_utils", mock_git),
-            patch("devtool.commands.commit.get_generation_service", return_value=mock_svc),
+            patch(
+                "devtool.commands.commit.get_generation_service", return_value=mock_svc
+            ),
             patch("devtool.commands.commit.get_config", return_value=_make_config()),
         ):
             result = runner.invoke(app, ["commit"], input="N\n")
@@ -58,7 +59,9 @@ class TestCommitCommand:
         mock_svc = _make_gen_service_mock()
         with (
             patch("devtool.commands.commit.git_utils", mock_git),
-            patch("devtool.commands.commit.get_generation_service", return_value=mock_svc),
+            patch(
+                "devtool.commands.commit.get_generation_service", return_value=mock_svc
+            ),
             patch("devtool.commands.commit.get_config", return_value=_make_config()),
         ):
             result = runner.invoke(app, ["commit"], input="y\n")
@@ -69,7 +72,9 @@ class TestCommitCommand:
         mock_svc = _make_gen_service_mock(commit_msg=None)
         with (
             patch("devtool.commands.commit.git_utils", mock_git),
-            patch("devtool.commands.commit.get_generation_service", return_value=mock_svc),
+            patch(
+                "devtool.commands.commit.get_generation_service", return_value=mock_svc
+            ),
             patch("devtool.commands.commit.get_config", return_value=_make_config()),
         ):
             result = runner.invoke(app, ["commit"])

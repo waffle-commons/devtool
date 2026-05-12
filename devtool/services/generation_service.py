@@ -61,7 +61,9 @@ class GenerationService:
         fix_mode: bool = False,
     ) -> Iterator[str]:
         """Stream a code review analysis."""
-        system, user = pre_review_prompt(diff, rag_context=rag_context, fix_mode=fix_mode)
+        system, user = pre_review_prompt(
+            diff, rag_context=rag_context, fix_mode=fix_mode
+        )
         yield from self._review.stream(user, system)
 
     # ── Security Audit ───────────────────────────────────────────────────
@@ -73,7 +75,9 @@ class GenerationService:
         fix_mode: bool = False,
     ) -> Iterator[str]:
         """Stream an OWASP-focused security audit."""
-        system, user = sec_audit_prompt(code, rag_context=rag_context, fix_mode=fix_mode)
+        system, user = sec_audit_prompt(
+            code, rag_context=rag_context, fix_mode=fix_mode
+        )
         yield from self._review.stream(user, system)
 
     # ── Documentation Generation ─────────────────────────────────────────
@@ -88,8 +92,11 @@ class GenerationService:
     ) -> Iterator[str]:
         """Stream Diataxis documentation generation."""
         system, user = docgen_prompt(
-            source_code, doc_type, language,
-            context_hint=context_hint, existing_doc=existing_doc,
+            source_code,
+            doc_type,
+            language,
+            context_hint=context_hint,
+            existing_doc=existing_doc,
         )
         yield from self._coding.stream(user, system)
 
@@ -105,7 +112,9 @@ class GenerationService:
     ) -> Iterator[str]:
         """Stream unit test generation."""
         system, user = testgen_prompt(
-            source_code, language, framework,
+            source_code,
+            language,
+            framework,
             existing_test_content=existing_test_content,
             rag_context=rag_context,
         )

@@ -9,13 +9,17 @@ from rich.panel import Panel
 from rich.table import Table
 
 from ..container import get_config
-from ..utils import git_utils
-from ..utils.path_utils import collect_source_files
-from ..utils.language_utils import LANGUAGE_MAPPING, detect_language_from_dir
-from ..utils.docgen_utils import DocType, DOC_TYPE_LABELS, ALL_DOC_TYPES, run_single_docgen
 from ..stream import OllamaStreamProcessor
+from ..utils import git_utils, ollama_client
+from ..utils.docgen_utils import (
+    ALL_DOC_TYPES,
+    DOC_TYPE_LABELS,
+    DocType,
+    run_single_docgen,
+)
+from ..utils.language_utils import LANGUAGE_MAPPING, detect_language_from_dir
+from ..utils.path_utils import collect_source_files
 from ..view import ReviewRenderer
-from ..utils import ollama_client
 
 console = Console()
 

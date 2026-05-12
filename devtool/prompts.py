@@ -8,7 +8,6 @@ Each function returns a (system_prompt, user_prompt) tuple ready for the LLM.
 
 from typing import Optional
 
-
 # ── Fix-mode suffix (RFC 011) ────────────────────────────────────────────────
 
 _FIX_MODE_SUFFIX = (
@@ -260,12 +259,13 @@ def repo_architect_prompt(tree: str, summaries: str) -> tuple[str, str]:
 def rag_ask_prompt(question: str, context_block: str) -> tuple[str, str]:
     """Return (system, user) prompts for RAG-powered Q&A."""
     system = (
-        "You are a senior software engineer answering questions about a codebase. "
-        "Use ONLY the provided code context to answer. If the context is insufficient, say so. "
-        "Be concise and reference file paths when relevant."
+        "You are an Expert Software Architect. "
+        "I will provide you with snippets of code retrieved from the user's repository that match their question. "
+        "Use ONLY the provided context to answer the question. "
+        "If the answer is not contained in the context, clearly state that you do not know. "
+        "Always reference the file path and line numbers when explaining."
     )
     prompt_body = (
-        f"[RETRIEVED CODE CONTEXT]\n{context_block}\n\n"
-        f"[QUESTION]\n{question}"
+        f"[RETRIEVED CODE CONTEXT]\n{context_block}\n\n" f"[QUESTION]\n{question}"
     )
     return system, prompt_body

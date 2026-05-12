@@ -82,16 +82,16 @@ def debug_ollama_cmd() -> None:
             all_ok = False
 
     if all_ok:
-        console.print(
-            "\n[bold green]All configured models are available.[/bold green]"
-        )
+        console.print("\n[bold green]All configured models are available.[/bold green]")
     else:
         console.print(
             "\n[bold red]Some models are missing. Install them with:[/bold red]"
         )
         for purpose, model_name in configured_models.items():
             base_name = model_name.split(":")[0].lower()
-            matched = [n for n in installed_names if n.split(":")[0].lower() == base_name]
+            matched = [
+                n for n in installed_names if n.split(":")[0].lower() == base_name
+            ]
             if not matched:
                 console.print(f"  [bold]ollama pull {model_name}[/bold]")
         raise typer.Exit(code=1)

@@ -20,8 +20,22 @@ _IGNORE_DIRS: frozenset[str] = frozenset(
 
 _SOURCE_EXTENSIONS: frozenset[str] = frozenset(
     {
-        ".py", ".php", ".cs", ".ts", ".js", ".java", ".kt", ".go",
-        ".rb", ".rs", ".c", ".cpp", ".h", ".jsx", ".tsx", ".vue",
+        ".py",
+        ".php",
+        ".cs",
+        ".ts",
+        ".js",
+        ".java",
+        ".kt",
+        ".go",
+        ".rb",
+        ".rs",
+        ".c",
+        ".cpp",
+        ".h",
+        ".jsx",
+        ".tsx",
+        ".vue",
     }
 )
 

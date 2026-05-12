@@ -208,5 +208,12 @@ __marimo__/
 
 # Project related
 .devtool/
+.githooks/
+.opencode/
+.project-memory/
 .idea/
+graphify-out/
+scripts/
 specs/
+/CLAUDE.md
+/opencode.json

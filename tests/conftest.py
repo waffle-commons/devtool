@@ -6,15 +6,12 @@ so tests never hit the network or filesystem.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Iterator, Optional
-from unittest.mock import MagicMock
 
 import pytest
 
 from devtool.config import Config
 from devtool.interfaces import IEmbeddingModel, IIndexStore, ILanguageModel
-
 
 # ── Config fixture ───────────────────────────────────────────────────────────
 
@@ -37,7 +34,11 @@ def config() -> Config:
 class FakeLanguageModel(ILanguageModel):
     """In-memory language model that returns canned responses."""
 
-    def __init__(self, generate_response: str = "fake response", stream_chunks: list[str] | None = None):
+    def __init__(
+        self,
+        generate_response: str = "fake response",
+        stream_chunks: list[str] | None = None,
+    ):
         self._generate_response = generate_response
         self._stream_chunks = stream_chunks or ["chunk1 ", "chunk2"]
 
@@ -56,8 +57,12 @@ def fake_llm() -> FakeLanguageModel:
 @pytest.fixture
 def fake_llm_factory():
     """Factory to create FakeLanguageModel with custom responses."""
-    def _create(generate_response: str = "fake response", stream_chunks: list[str] | None = None):
+
+    def _create(
+        generate_response: str = "fake response", stream_chunks: list[str] | None = None
+    ):
         return FakeLanguageModel(generate_response, stream_chunks)
+
     return _create
 
 
@@ -89,14 +94,18 @@ class FakeIndexStore(IIndexStore):
     def __init__(self):
         self._storage: dict[str, tuple[list[list[float]], list[dict]]] = {}
 
-    def save(self, vectors: list[list[float]], metadata: list[dict], store_path: str) -> None:
+    def save(
+        self, vectors: list[list[float]], metadata: list[dict], store_path: str
+    ) -> None:
         self._storage[store_path] = (vectors, metadata)
 
     def load(self, store_path: str) -> tuple[object, list[dict]]:
         vectors, metadata = self._storage[store_path]
         return vectors, metadata  # return raw list as the "index"
 
-    def search(self, index: object, query_vector: list[float], top_k: int) -> list[tuple[float, int]]:
+    def search(
+        self, index: object, query_vector: list[float], top_k: int
+    ) -> list[tuple[float, int]]:
         vectors = index  # type: list[list[float]]
         if not vectors:
             return []

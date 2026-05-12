@@ -1,7 +1,5 @@
 """Tests for devtool.config — Config loading."""
 
-import pytest
-
 from devtool.config import Config, load_config
 
 

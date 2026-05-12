@@ -35,7 +35,9 @@ class IIndexStore(ABC):
     """Contract for a vector index store (FAISS, Chroma, etc.)."""
 
     @abstractmethod
-    def save(self, vectors: list[list[float]], metadata: list[dict], store_path: str) -> None:
+    def save(
+        self, vectors: list[list[float]], metadata: list[dict], store_path: str
+    ) -> None:
         """Persist vectors and their metadata."""
         ...
 
@@ -45,7 +47,9 @@ class IIndexStore(ABC):
         ...
 
     @abstractmethod
-    def search(self, index: object, query_vector: list[float], top_k: int) -> list[tuple[float, int]]:
+    def search(
+        self, index: object, query_vector: list[float], top_k: int
+    ) -> list[tuple[float, int]]:
         """Search *index* for nearest neighbours. Returns list of (distance, id)."""
         ...
 

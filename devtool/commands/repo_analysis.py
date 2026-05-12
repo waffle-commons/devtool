@@ -3,24 +3,31 @@
 import fnmatch
 import json
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeRemainingColumn
+from rich.progress import (
+    BarColumn,
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    TimeRemainingColumn,
+)
 
 from ..container import get_config, get_generation_service, get_rag_service
-from ..utils.path_utils import _IGNORE_DIRS
-from ..utils.language_utils import LANGUAGE_MAPPING
-from ..services.rag_service import VECTORSTORE_DIR, METADATA_FILE
+from ..services.rag_service import METADATA_FILE, VECTORSTORE_DIR
 from ..stream import OllamaStreamProcessor
+from ..utils.language_utils import LANGUAGE_MAPPING
+from ..utils.path_utils import _IGNORE_DIRS
 from ..view import ReviewRenderer
 
 console = Console()
 
 
 def repo_analysis_cmd(
-    target_dir: str = typer.Argument(".", help="Directory to analyze (default: current directory)"),
+    target_dir: str = typer.Argument(
+        ".", help="Directory to analyze (default: current directory)"
+    ),
     use_rag: bool = typer.Option(
         False,
         "--use-rag",
@@ -70,7 +77,9 @@ def repo_analysis_cmd(
             BarColumn(),
             console=console,
         ) as progress:
-            task = progress.add_task("[cyan]Sampling domain chunks...", total=len(_PROBES))
+            task = progress.add_task(
+                "[cyan]Sampling domain chunks...", total=len(_PROBES)
+            )
             for probe in _PROBES:
                 progress.update(task, description=f"[cyan]Probing: {probe[:50]}...")
                 results = rag_svc.search(probe, target_dir=target_dir, top_k=5)
@@ -82,7 +91,9 @@ def repo_analysis_cmd(
                 progress.advance(task)
 
         if not sampled_chunks:
-            console.print("[red]RAG index returned no chunks. Is the index empty?[/red]")
+            console.print(
+                "[red]RAG index returned no chunks. Is the index empty?[/red]"
+            )
             raise typer.Exit(code=1)
 
         all_summaries = "\n\n".join(sampled_chunks)
@@ -128,7 +139,9 @@ def repo_analysis_cmd(
                     valid_files.append(item)
 
         if not valid_files:
-            console.print("[yellow]No supported source files found for analysis.[/yellow]")
+            console.print(
+                "[yellow]No supported source files found for analysis.[/yellow]"
+            )
             raise typer.Exit(code=0)
 
         file_summaries: list[str] = []
@@ -139,9 +152,11 @@ def repo_analysis_cmd(
             BarColumn(),
             TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
             TimeRemainingColumn(),
-            console=console
+            console=console,
         ) as progress:
-            task = progress.add_task("[cyan]Scanning and summarizing files...", total=len(valid_files))
+            task = progress.add_task(
+                "[cyan]Scanning and summarizing files...", total=len(valid_files)
+            )
 
             for filepath in valid_files:
                 rel_path = filepath.relative_to(target).as_posix()
@@ -162,7 +177,9 @@ def repo_analysis_cmd(
                     else:
                         file_summaries.append(f"### {rel_path}\n(Failed to summarize)")
                 except Exception as e:
-                    console.print(f"[yellow]Warning: Could not read {rel_path}: {e}[/yellow]")
+                    console.print(
+                        f"[yellow]Warning: Could not read {rel_path}: {e}[/yellow]"
+                    )
                 progress.advance(task)
 
         if not file_summaries:
@@ -177,7 +194,9 @@ def repo_analysis_cmd(
         all_summaries = "\n\n".join(file_summaries)
 
     # ── Reduce Phase: Architect Analysis ─────────────────────────────────
-    console.print("\n[bold magenta]Generating Global Architecture Report...[/bold magenta]\n")
+    console.print(
+        "\n[bold magenta]Generating Global Architecture Report...[/bold magenta]\n"
+    )
 
     # Safety: truncate to stay within Ollama context window
     max_prompt_chars = config.num_ctx * 3  # ~3 chars per token as heuristic

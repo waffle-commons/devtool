@@ -19,23 +19,29 @@ class Config:
     embedding_model: str = "nomic-embed-text"
     show_thoughts: bool = True
     request_timeout: int = 300  # seconds; 5 min default for cold-start / large diffs
-    num_ctx: int = 8192         # Ollama context window size (tokens) — default reduced for speed
-    keep_alive: str = "10m"     # Keep model loaded in VRAM (avoids cold-start on repeated calls)
+    num_ctx: int = (
+        8192  # Ollama context window size (tokens) — default reduced for speed
+    )
+    keep_alive: str = (
+        "10m"  # Keep model loaded in VRAM (avoids cold-start on repeated calls)
+    )
 
     # ── Multi-model routing (RFC 012) ────────────────────────────────────
     # Each purpose can override the default model. Empty string = use default.
-    model_coding: str = ""   # e.g. "qwen2.5-coder" — testgen, docgen
-    model_fast: str = ""     # e.g. "qwen:0.5b"     — commit messages
-    model_review: str = ""   # e.g. "gemma4"         — pre-review, sec-audit
+    model_coding: str = ""  # e.g. "qwen2.5-coder" — testgen, docgen
+    model_fast: str = ""  # e.g. "qwen:0.5b"     — commit messages
+    model_review: str = ""  # e.g. "gemma4"         — pre-review, sec-audit
 
     # ── Per-purpose performance tuning ───────────────────────────────────
     # Smaller context + output caps = dramatically faster inference
-    num_ctx_fast: int = 4096     # commit messages: small context is sufficient
-    num_ctx_coding: int = 8192   # testgen, docgen: medium context
-    num_ctx_review: int = 12288  # pre-review, sec-audit: needs more context for large diffs
-    num_predict_fast: int = 512      # commit messages: short output
-    num_predict_coding: int = 4096   # testgen, docgen: longer output
-    num_predict_review: int = 4096   # reviews: structured but capped
+    num_ctx_fast: int = 4096  # commit messages: small context is sufficient
+    num_ctx_coding: int = 8192  # testgen, docgen: medium context
+    num_ctx_review: int = (
+        12288  # pre-review, sec-audit: needs more context for large diffs
+    )
+    num_predict_fast: int = 512  # commit messages: short output
+    num_predict_coding: int = 4096  # testgen, docgen: longer output
+    num_predict_review: int = 4096  # reviews: structured but capped
     num_predict_default: int = 4096  # fallback
 
     def resolve_model(self, purpose: str) -> str:
@@ -106,7 +112,11 @@ def load_config() -> Config:
     cwd_config = Path(".devtool.toml")
     home_config = Path.home() / ".devtool.toml"
 
-    config_path = cwd_config if cwd_config.exists() else (home_config if home_config.exists() else None)
+    config_path = (
+        cwd_config
+        if cwd_config.exists()
+        else (home_config if home_config.exists() else None)
+    )
 
     config = Config()
 

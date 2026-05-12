@@ -32,7 +32,9 @@ class TestLanguageModelGenerate:
         fake_resp.json.return_value = {"response": "  hello world  "}
         fake_resp.raise_for_status = MagicMock()
 
-        with patch("devtool.utils.ollama_client.requests.post", return_value=fake_resp) as mock_post:
+        with patch(
+            "devtool.utils.ollama_client.requests.post", return_value=fake_resp
+        ) as mock_post:
             model = OllamaLanguageModel(cfg)
             result = model.generate("prompt", "system")
 
@@ -163,10 +165,12 @@ class TestEmbeddingModel:
     def test_embed_raises_on_network_error(self, cfg):
         import requests as _req
 
+        from devtool.utils.ollama_client import OllamaEmbeddingError
+
         with patch(
             "devtool.utils.ollama_client.requests.post",
             side_effect=_req.exceptions.ConnectionError("refused"),
         ):
             model = OllamaEmbeddingModel(cfg)
-            with pytest.raises(_req.exceptions.ConnectionError):
+            with pytest.raises(OllamaEmbeddingError):
                 model.embed("hello")

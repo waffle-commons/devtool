@@ -7,9 +7,9 @@ import typer
 from rich.console import Console
 
 from ..container import get_config, get_generation_service
+from ..stream import OllamaStreamProcessor
 from ..utils import git_utils
 from ..utils.path_utils import collect_source_files
-from ..stream import OllamaStreamProcessor
 from ..view import ReviewRenderer
 from ._rag_helpers import fetch_rag_context
 
@@ -102,7 +102,9 @@ def sec_audit_cmd(
     console.print("[bold magenta]Security Audit Results:[/bold magenta]\n")
 
     raw_stream = gen_service.sec_audit_stream(
-        code, rag_context=rag_context, fix_mode=fix,
+        code,
+        rag_context=rag_context,
+        fix_mode=fix,
     )
     state_generator = OllamaStreamProcessor().process(raw_stream)
     view = ReviewRenderer(config, console)

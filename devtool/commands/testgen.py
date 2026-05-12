@@ -7,9 +7,9 @@ import typer
 from rich.console import Console
 
 from ..container import get_config, get_generation_service
+from ..stream import OllamaStreamProcessor
 from ..utils import git_utils
 from ..utils.language_utils import LANGUAGE_MAPPING
-from ..stream import OllamaStreamProcessor
 from ..view import ReviewRenderer
 from ._rag_helpers import fetch_rag_context
 
@@ -125,9 +125,7 @@ def testgen_cmd(
         rag_context: Optional[str] = None
         if use_rag:
             query = f"Dependencies, interfaces, or traits used by {current_file.name}"
-            rag_context = fetch_rag_context(
-                query, console, label="dependency context"
-            )
+            rag_context = fetch_rag_context(query, console, label="dependency context")
 
         raw_stream = gen_service.testgen_stream(
             source_code=source_code,

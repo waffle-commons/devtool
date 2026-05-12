@@ -33,9 +33,7 @@ def fetch_rag_context(
         )
         return None
 
-    console.print(
-        f"[dim cyan]Fetching {label} from RAG index...[/dim cyan]"
-    )
+    console.print(f"[dim cyan]Fetching {label} from RAG index...[/dim cyan]")
     results = rag_service.search(query, target_dir=target_dir, top_k=top_k)
     rag_context = rag_service.format_rag_context(results)
 

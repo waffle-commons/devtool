@@ -33,10 +33,20 @@ def _render_diff(patch: Patch, base_dir: Path | None = None) -> str:
         original = patch.search
 
     # Compute a proper unified diff
-    original_lines = (original if patch.search in original else patch.search).splitlines(keepends=True)
+    original_lines = (
+        original if patch.search in original else patch.search
+    ).splitlines(keepends=True)
     # Build what the file would look like after replacement
-    replaced = original.replace(patch.search, patch.replace, 1) if patch.search in original else patch.replace
-    replaced_lines = replaced.splitlines(keepends=True) if patch.search in original else patch.replace.splitlines(keepends=True)
+    replaced = (
+        original.replace(patch.search, patch.replace, 1)
+        if patch.search in original
+        else patch.replace
+    )
+    replaced_lines = (
+        replaced.splitlines(keepends=True)
+        if patch.search in original
+        else patch.replace.splitlines(keepends=True)
+    )
 
     diff_lines = difflib.unified_diff(
         patch.search.splitlines(keepends=True),
@@ -84,7 +94,7 @@ def review_and_apply_patches(
             console.print(
                 Panel(
                     Syntax(diff_text, "diff", theme="monokai", line_numbers=False),
-                    title=f"[bold yellow]Proposed Change[/bold yellow]",
+                    title="[bold yellow]Proposed Change[/bold yellow]",
                     border_style="yellow",
                     padding=(1, 2),
                 )
@@ -105,11 +115,15 @@ def review_and_apply_patches(
             )
 
         # ── Interactive prompt ───────────────────────────────────────
-        choice = typer.prompt(
-            "Apply this patch? [y/N/skip-all]",
-            default="N",
-            show_default=False,
-        ).lower().strip()
+        choice = (
+            typer.prompt(
+                "Apply this patch? [y/N/skip-all]",
+                default="N",
+                show_default=False,
+            )
+            .lower()
+            .strip()
+        )
 
         if choice == "skip-all":
             console.print("[yellow]Skipping all remaining patches.[/yellow]")

@@ -1,14 +1,49 @@
 """RAG commands: index the codebase and ask semantic questions."""
 
+import time
+from pathlib import Path
+
 import typer
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, MofNCompleteColumn
+from rich.progress import (
+    BarColumn,
+    MofNCompleteColumn,
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+)
 
 from ..container import get_config, get_generation_service, get_rag_service
 from ..stream import OllamaStreamProcessor
 from ..view import ReviewRenderer
 
 console = Console()
+
+
+def _check_index_staleness(target: str, stale_hours: int = 24) -> None:
+    """Check if the FAISS index metadata is older than stale_hours and warn if so.
+
+    Args:
+        target: Root directory where the .devtool/vectorstore lives.
+        stale_hours: Number of hours after which to consider the index stale (default 24).
+    """
+    metadata_path = Path(target) / ".devtool" / "vectorstore" / "metadata.json"
+
+    if not metadata_path.exists():
+        # Index doesn't exist, no need to warn about staleness
+        return
+
+    # Get the modification time of the metadata file
+    mtime = metadata_path.stat().st_mtime
+    current_time = time.time()
+    hours_since_update = (current_time - mtime) / 3600
+
+    if hours_since_update > stale_hours:
+        console.print(
+            f"[yellow]⚠ Index may be stale[/yellow] "
+            f"(last updated {hours_since_update:.1f} hours ago).\n"
+            f"Consider running [bold]devtool index --update[/bold] to refresh it."
+        )
 
 
 def index_cmd(
@@ -50,7 +85,12 @@ def index_cmd(
             task_id = progress.add_task("Embedding new/changed chunks...", total=None)
 
             def _on_update_progress(current: int, total: int, filename: str) -> None:
-                progress.update(task_id, total=total, completed=current, description=f"Embedding [cyan]{filename}[/cyan]")
+                progress.update(
+                    task_id,
+                    total=total,
+                    completed=current,
+                    description=f"Embedding [cyan]{filename}[/cyan]",
+                )
 
             try:
                 added, removed, unchanged = rag_svc.update_index(
@@ -85,7 +125,12 @@ def index_cmd(
         task_id = progress.add_task("Embedding chunks...", total=None)
 
         def _on_progress(current: int, total: int, filename: str) -> None:
-            progress.update(task_id, total=total, completed=current, description=f"Embedding [cyan]{filename}[/cyan]")
+            progress.update(
+                task_id,
+                total=total,
+                completed=current,
+                description=f"Embedding [cyan]{filename}[/cyan]",
+            )
 
         total_chunks = rag_svc.build_index(
             target_dir=target,
@@ -127,6 +172,9 @@ def ask_cmd(
 
     console.print(f"[blue]Searching index for: [bold]{question}[/bold][/blue]\n")
 
+    # Check if index is stale and warn user
+    _check_index_staleness(target)
+
     try:
         results = rag_svc.search(
             query=question,
@@ -149,7 +197,9 @@ def ask_cmd(
         )
     context_block = "\n\n".join(context_parts)
 
-    console.print(f"[blue]Generating answer from Ollama ({config.ollama_model})...[/blue]\n")
+    console.print(
+        f"[blue]Generating answer from Ollama ({config.ollama_model})...[/blue]\n"
+    )
 
     raw_stream = gen_service.rag_ask_stream(
         question=question,

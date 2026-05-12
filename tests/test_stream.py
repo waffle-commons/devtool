@@ -1,7 +1,5 @@
 """Tests for devtool.stream — OllamaStreamProcessor and ReviewState."""
 
-import pytest
-
 from devtool.stream import OllamaStreamProcessor, ReviewState
 
 

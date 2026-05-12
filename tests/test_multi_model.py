@@ -1,7 +1,5 @@
 """Tests for RFC 012 — Multi-Model Routing via Config.resolve_model."""
 
-import pytest
-
 from devtool.config import Config, load_config
 
 

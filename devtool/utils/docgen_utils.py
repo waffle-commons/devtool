@@ -6,10 +6,10 @@ from typing import Optional
 
 from rich.console import Console
 
-from . import ollama_client
+from ..container import get_config
 from ..stream import OllamaStreamProcessor
 from ..view import ReviewRenderer
-from ..container import get_config
+from . import ollama_client
 
 console = Console()
 

@@ -15,7 +15,9 @@ METADATA_FILE = "metadata.json"
 class FaissIndexStore(IIndexStore):
     """Local FAISS flat-L2 vector store."""
 
-    def save(self, vectors: list[list[float]], metadata: list[dict], store_path: str) -> None:
+    def save(
+        self, vectors: list[list[float]], metadata: list[dict], store_path: str
+    ) -> None:
         path = Path(store_path)
         path.mkdir(parents=True, exist_ok=True)
         matrix = np.array(vectors, dtype=np.float32)
@@ -33,7 +35,9 @@ class FaissIndexStore(IIndexStore):
             metadata: list[dict] = json.load(f)
         return index, metadata
 
-    def search(self, index: object, query_vector: list[float], top_k: int) -> list[tuple[float, int]]:
+    def search(
+        self, index: object, query_vector: list[float], top_k: int
+    ) -> list[tuple[float, int]]:
         query_matrix = np.array([query_vector], dtype=np.float32)
         k = min(top_k, index.ntotal)
         if k == 0:

@@ -49,11 +49,11 @@ class PatchSet:
 # ── Parser ───────────────────────────────────────────────────────────────────
 
 _BLOCK_RE = re.compile(
-    r"<{4}\s*SEARCH\s+file:(.+?)\n"   # <<<< SEARCH file:path/to/file.py
-    r"(.*?)\n"                          # original code (search block)
-    r"={4}\s*REPLACE\n"                # ==== REPLACE
-    r"(.*?)\n"                          # replacement code
-    r">{4}",                            # >>>>
+    r"<{4}\s*SEARCH\s+file:(.+?)\n"  # <<<< SEARCH file:path/to/file.py
+    r"(.*?)\n"  # original code (search block)
+    r"={4}\s*REPLACE\n"  # ==== REPLACE
+    r"(.*?)\n"  # replacement code
+    r">{4}",  # >>>>
     re.DOTALL,
 )
 
@@ -101,9 +101,13 @@ def apply_patch(patch: Patch, base_dir: Path | None = None) -> Patch:
         normalized_search = "\n".join(l.rstrip() for l in patch.search.splitlines())
         if normalized_search in normalized_content:
             # Apply on normalized then write back
-            new_content = normalized_content.replace(normalized_search, patch.replace, 1)
+            new_content = normalized_content.replace(
+                normalized_search, patch.replace, 1
+            )
         else:
-            patch.error = f"SEARCH block not found in {target} (content may have changed)"
+            patch.error = (
+                f"SEARCH block not found in {target} (content may have changed)"
+            )
             return patch
     else:
         new_content = content.replace(patch.search, patch.replace, 1)

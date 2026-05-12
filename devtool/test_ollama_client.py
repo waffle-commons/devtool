@@ -1,4 +1,3 @@
-
 # Fixture setup for required variables if needed, otherwise rely on imports
 
 # Mocking the environment for isolated testing might be necessary for external API calls,

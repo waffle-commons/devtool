@@ -1,12 +1,11 @@
 """Tests for devtool.commands.pre_review — review command."""
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-import pytest
 from typer.testing import CliRunner
 
-from devtool.main import app
 from devtool.config import Config
+from devtool.main import app
 from devtool.stream import ReviewState
 
 runner = CliRunner()
@@ -58,8 +57,13 @@ class TestPreReviewCommand:
 
         with (
             patch("devtool.commands.pre_review.git_utils", mock_git),
-            patch("devtool.commands.pre_review.get_generation_service", return_value=mock_svc),
-            patch("devtool.commands.pre_review.get_config", return_value=_make_config()),
+            patch(
+                "devtool.commands.pre_review.get_generation_service",
+                return_value=mock_svc,
+            ),
+            patch(
+                "devtool.commands.pre_review.get_config", return_value=_make_config()
+            ),
         ):
             result = runner.invoke(app, ["review"])
 
@@ -73,8 +77,13 @@ class TestPreReviewCommand:
 
         with (
             patch("devtool.commands.pre_review.git_utils", mock_git),
-            patch("devtool.commands.pre_review.get_generation_service", return_value=mock_svc),
-            patch("devtool.commands.pre_review.get_config", return_value=_make_config()),
+            patch(
+                "devtool.commands.pre_review.get_generation_service",
+                return_value=mock_svc,
+            ),
+            patch(
+                "devtool.commands.pre_review.get_config", return_value=_make_config()
+            ),
         ):
             result = runner.invoke(app, ["review", "--compare", "develop"])
 
@@ -91,8 +100,13 @@ class TestPreReviewCommand:
 
         with (
             patch("devtool.commands.pre_review.git_utils", mock_git),
-            patch("devtool.commands.pre_review.get_generation_service", return_value=mock_svc),
-            patch("devtool.commands.pre_review.get_config", return_value=_make_config()),
+            patch(
+                "devtool.commands.pre_review.get_generation_service",
+                return_value=mock_svc,
+            ),
+            patch(
+                "devtool.commands.pre_review.get_config", return_value=_make_config()
+            ),
         ):
             result = runner.invoke(app, ["review"])
 

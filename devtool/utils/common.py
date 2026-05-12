@@ -6,16 +6,9 @@ New code should import directly from the specific module:
   - devtool.utils.docgen_utils
 """
 
-from .path_utils import _IGNORE_DIRS, _SOURCE_EXTENSIONS, collect_source_files
-
+from .docgen_utils import ALL_DOC_TYPES, DOC_TYPE_LABELS, DocType, run_single_docgen
 from .language_utils import LANGUAGE_MAPPING, detect_language_from_dir
-
-from .docgen_utils import (
-    DocType,
-    DOC_TYPE_LABELS,
-    ALL_DOC_TYPES,
-    run_single_docgen,
-)
+from .path_utils import _IGNORE_DIRS, _SOURCE_EXTENSIONS, collect_source_files
 
 __all__ = [
     "_IGNORE_DIRS",

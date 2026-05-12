@@ -6,8 +6,8 @@ import typer
 from rich.console import Console
 
 from ..container import get_config, get_generation_service
-from ..utils import git_utils
 from ..stream import OllamaStreamProcessor
+from ..utils import git_utils
 from ..view import ReviewRenderer
 from ._rag_helpers import fetch_rag_context
 
@@ -87,14 +87,14 @@ def pre_review_cmd(
     rag_context: Optional[str] = None
     if use_rag:
         query = f"Classes, interfaces, and modules related to: {diff[:500]}"
-        rag_context = fetch_rag_context(
-            query, console, label="architectural context"
-        )
+        rag_context = fetch_rag_context(query, console, label="architectural context")
 
     console.print("\n[bold magenta]Code Review Results:[/bold magenta]\n")
 
     raw_stream = gen_service.pre_review_stream(
-        diff, rag_context=rag_context, fix_mode=fix,
+        diff,
+        rag_context=rag_context,
+        fix_mode=fix,
     )
     state_generator = OllamaStreamProcessor().process(raw_stream)
 

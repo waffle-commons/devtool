@@ -33,6 +33,23 @@ class OllamaRequestError(Exception):
         super().__init__(f"HTTP {status_code}: {body}")
 
 
+class OllamaEmbeddingError(Exception):
+    """Raised when the embedding model is missing or fails during embedding.
+
+    This exception wraps embedding-specific errors with a helpful suggestion
+    to pull the missing model via `ollama pull`.
+    """
+
+    def __init__(self, model_name: str, original_error: str):
+        self.model_name = model_name
+        self.original_error = original_error
+        message = (
+            f"Embedding model '{model_name}' failed or is not available: {original_error}\n"
+            f"  → Fix: Run `ollama pull {model_name}`"
+        )
+        super().__init__(message)
+
+
 # ── Network helpers (private) ────────────────────────────────────────────────
 
 
@@ -215,7 +232,16 @@ class OllamaEmbeddingModel(IEmbeddingModel):
             return embedding
         except requests.exceptions.RequestException as e:
             _handle_request_exception(e, url)
-            raise
+            # Extract error message from the exception
+            if isinstance(e, requests.exceptions.HTTPError) and e.response is not None:
+                try:
+                    error_body = e.response.json().get("error", e.response.text)
+                except Exception:
+                    error_body = e.response.text if e.response is not None else str(e)
+            else:
+                error_body = str(e)
+            # Wrap with helpful model-specific suggestion
+            raise OllamaEmbeddingError(self._model, error_body) from e
 
 
 # ── Backward-compatible module-level functions ───────────────────────────────
@@ -235,8 +261,11 @@ def generate_commit_message(diff: str, config: Config) -> Optional[str]:
 
 
 def pre_review_code_stream(
-    diff: str, config: Config, rag_context: Optional[str] = None,
-    *, fix_mode: bool = False,
+    diff: str,
+    config: Config,
+    rag_context: Optional[str] = None,
+    *,
+    fix_mode: bool = False,
 ) -> Iterator[str]:
     from ..prompts import pre_review_prompt
 
@@ -245,8 +274,11 @@ def pre_review_code_stream(
 
 
 def sec_audit_stream(
-    code: str, config: Config, rag_context: Optional[str] = None,
-    *, fix_mode: bool = False,
+    code: str,
+    config: Config,
+    rag_context: Optional[str] = None,
+    *,
+    fix_mode: bool = False,
 ) -> Iterator[str]:
     from ..prompts import sec_audit_prompt
 
@@ -265,8 +297,11 @@ def docgen_stream(
     from ..prompts import docgen_prompt
 
     system, user = docgen_prompt(
-        source_code, doc_type, language,
-        context_hint=context_hint, existing_doc=existing_doc,
+        source_code,
+        doc_type,
+        language,
+        context_hint=context_hint,
+        existing_doc=existing_doc,
     )
     yield from OllamaLanguageModel(config, purpose="coding").stream(user, system)
 
@@ -282,7 +317,9 @@ def testgen_code_stream(
     from ..prompts import testgen_prompt
 
     system, user = testgen_prompt(
-        source_code, language, framework,
+        source_code,
+        language,
+        framework,
         existing_test_content=existing_test_content,
         rag_context=rag_context,
     )

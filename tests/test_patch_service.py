@@ -1,9 +1,6 @@
 """Tests for devtool.services.patch_service — SEARCH/REPLACE parser and applier."""
 
-import pytest
-
 from devtool.services.patch_service import Patch, PatchSet, apply_patch, parse_patches
-
 
 # ── parse_patches ────────────────────────────────────────────────────────────
 
@@ -66,10 +63,12 @@ def new():
 
 class TestPatchSet:
     def test_applied_count(self):
-        ps = PatchSet(patches=[
-            Patch(file="a.py", search="x", replace="y", applied=True),
-            Patch(file="b.py", search="x", replace="y", applied=False),
-        ])
+        ps = PatchSet(
+            patches=[
+                Patch(file="a.py", search="x", replace="y", applied=True),
+                Patch(file="b.py", search="x", replace="y", applied=False),
+            ]
+        )
         assert ps.applied_count == 1
         assert ps.total == 2
 
