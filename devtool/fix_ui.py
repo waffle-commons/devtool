@@ -29,19 +29,16 @@ def _render_diff(patch: Patch, base_dir: Path | None = None) -> str:
             original = target.read_text(encoding="utf-8")
         except Exception:
             original = patch.search
-    else:
-        original = patch.search
-
-    # Compute a proper unified diff
-    original_lines = (
-        original if patch.search in original else patch.search
-    ).splitlines(keepends=True)
-    # Build what the file would look like after replacement
-    replaced = (
-        original.replace(patch.search, patch.replace, 1)
-        if patch.search in original
-        else patch.replace
-    )
+     else:
+         original = patch.search
+ 
+     # Compute a proper unified diff
+     # Build what the file would look like after replacement
+     replaced = (
+         original.replace(patch.search, patch.replace, 1)
+         if patch.search in original
+         else patch.replace
+     )
     replaced_lines = (
         replaced.splitlines(keepends=True)
         if patch.search in original

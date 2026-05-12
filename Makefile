@@ -28,7 +28,7 @@ $(VENV)/bin/activate:
 	@echo "⬇️ Installation des dépendances via $(VENV_PYTHON) -m pip..."
 	$(VENV_PYTHON) -m pip install --upgrade pip setuptools wheel
 	$(VENV_PYTHON) -m pip install -e .
-	$(VENV_PYTHON) -m pip install pytest pytest-mock ruff black isort
+	$(VENV_PYTHON) -m pip install pytest pytest-mock pytest-cov ruff black isort
 	@touch $(VENV)/bin/activate
 
 dev: $(VENV)/bin/activate
@@ -36,7 +36,7 @@ dev: $(VENV)/bin/activate
 
 test: dev
 	@echo "🧪 Lancement des tests..."
-	$(VENV_PYTHON) -m pytest tests/ -v
+	$(VENV_PYTHON) -m pytest tests/ -v --exitfirst --cov=devtool --cov-report=term-missing
 
 lint: dev
 	@echo "🧹 Lancement du formattage et du linter..."

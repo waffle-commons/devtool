@@ -24,5 +24,21 @@ devtool = "devtool.main:app"
 [project.optional-dependencies]
 test = [
     "pytest>=7.0.0",
-    "pytest-mock"
+    "pytest-mock",
+    "pytest-cov"
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--tb=short -q"
+
+[tool.coverage.run]
+source = ["devtool"]
+omit = [
+    "devtool/test_*.py",
+]
+
+[tool.coverage.report]
+fail_under = 60
+show_missing = true
+skip_covered = false

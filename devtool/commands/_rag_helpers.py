@@ -8,7 +8,7 @@ from typing import Optional
 
 from rich.console import Console
 
-from ..container import get_config, get_rag_service
+from ..container import get_rag_service
 
 
 def fetch_rag_context(
@@ -24,7 +24,6 @@ def fetch_rag_context(
     Returns the formatted context string, or None if unavailable.
     """
     rag_service = get_rag_service()
-    config = get_config()
 
     if not rag_service.has_index(target_dir):
         console.print(
