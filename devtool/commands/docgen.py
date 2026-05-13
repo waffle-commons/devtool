@@ -10,7 +10,7 @@ from rich.table import Table
 
 from ..container import get_config
 from ..stream import OllamaStreamProcessor
-from ..utils import git_utils, ollama_client
+from ..utils import git_utils, llm_client
 from ..utils.docgen_utils import (
     ALL_DOC_TYPES,
     DOC_TYPE_LABELS,
@@ -115,7 +115,7 @@ def docgen_cmd(
         )
         console.print(f"[bold magenta]{doc_label} Output:[/bold magenta]\n")
 
-        raw_stream = ollama_client.docgen_stream(
+        raw_stream = llm_client.docgen_stream(
             source_code=source_code,
             doc_type=type_key,
             language=language,

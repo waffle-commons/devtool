@@ -51,7 +51,7 @@ class TestDocgenCommand:
 
         _make_view_mock(mocker, "# Documentation\nThis is a module.")
         mocker.patch("devtool.commands.docgen.OllamaStreamProcessor")
-        mocker.patch("devtool.commands.docgen.ollama_client")
+        mocker.patch("devtool.commands.docgen.llm_client")
 
         with (
             patch("devtool.commands.docgen.get_config", return_value=_make_config()),
@@ -78,7 +78,7 @@ class TestDocgenCommand:
 
         _make_view_mock(mocker, "# Tutorial\nWelcome!")
         mocker.patch("devtool.commands.docgen.OllamaStreamProcessor")
-        mocker.patch("devtool.commands.docgen.ollama_client")
+        mocker.patch("devtool.commands.docgen.llm_client")
 
         with (
             patch("devtool.commands.docgen.get_config", return_value=_make_config()),
@@ -115,7 +115,7 @@ class TestDocgenCommand:
 
         _make_view_mock(mocker, "# Reference\nAPI docs")
         mocker.patch("devtool.commands.docgen.OllamaStreamProcessor")
-        mocker.patch("devtool.commands.docgen.ollama_client")
+        mocker.patch("devtool.commands.docgen.llm_client")
 
         with (
             patch("devtool.commands.docgen.get_config", return_value=_make_config()),
@@ -142,7 +142,7 @@ class TestDocgenCommand:
 
         _make_view_mock(mocker, "# Tutorial\nStep-by-step guide...")
         mocker.patch("devtool.commands.docgen.OllamaStreamProcessor")
-        mocker.patch("devtool.commands.docgen.ollama_client")
+        mocker.patch("devtool.commands.docgen.llm_client")
 
         with (
             patch("devtool.commands.docgen.get_config", return_value=_make_config()),
@@ -167,7 +167,7 @@ class TestDocgenCommand:
 
         _make_view_mock(mocker, "# How-to\nDo this...")
         mocker.patch("devtool.commands.docgen.OllamaStreamProcessor")
-        mocker.patch("devtool.commands.docgen.ollama_client")
+        mocker.patch("devtool.commands.docgen.llm_client")
 
         with (
             patch("devtool.commands.docgen.get_config", return_value=_make_config()),
@@ -199,7 +199,7 @@ class TestDocgenCommand:
 
         _make_view_mock(mocker, "# Explanation\nWhy it works")
         mocker.patch("devtool.commands.docgen.OllamaStreamProcessor")
-        mock_ollama = mocker.patch("devtool.commands.docgen.ollama_client")
+        mock_ollama = mocker.patch("devtool.commands.docgen.llm_client")
         mock_ollama.docgen_stream.return_value = iter(["# Explanation"])
 
         with (
@@ -231,7 +231,7 @@ class TestDocgenCommand:
 
         _make_view_mock(mocker, "# Updated Tutorial\nNew content")
         mocker.patch("devtool.commands.docgen.OllamaStreamProcessor")
-        mocker.patch("devtool.commands.docgen.ollama_client")
+        mocker.patch("devtool.commands.docgen.llm_client")
 
         with (
             patch("devtool.commands.docgen.get_config", return_value=_make_config()),
@@ -356,7 +356,7 @@ class TestDocgenCommand:
         mock_renderer_cls.return_value.render_live_stream.return_value = fake_state
 
         mocker.patch("devtool.commands.docgen.OllamaStreamProcessor")
-        mock_ollama = mocker.patch("devtool.commands.docgen.ollama_client")
+        mock_ollama = mocker.patch("devtool.commands.docgen.llm_client")
         mock_ollama.docgen_stream.return_value = iter([])
 
         with (
@@ -382,7 +382,7 @@ class TestDocgenCommand:
 
         _make_view_mock(mocker, "# Tutorial\nContent")
         mocker.patch("devtool.commands.docgen.OllamaStreamProcessor")
-        mocker.patch("devtool.commands.docgen.ollama_client")
+        mocker.patch("devtool.commands.docgen.llm_client")
 
         with (
             patch("devtool.commands.docgen.get_config", return_value=_make_config()),
@@ -409,13 +409,13 @@ class TestDocgenCommand:
         assert "Error" in result.output or "saving" in result.output
 
     def test_context_hint_passed_to_ollama(self, tmp_path: Path, mocker) -> None:
-        """Test that --context hint is passed to ollama_client.docgen_stream."""
+        """Test that --context hint is passed to llm_client.docgen_stream."""
         source_file = tmp_path / "service.py"
         source_file.write_text("class Service: pass")
 
         _make_view_mock(mocker, "# Reference\nAPI Reference")
         mocker.patch("devtool.commands.docgen.OllamaStreamProcessor")
-        mock_ollama = mocker.patch("devtool.commands.docgen.ollama_client")
+        mock_ollama = mocker.patch("devtool.commands.docgen.llm_client")
 
         with (
             patch("devtool.commands.docgen.get_config", return_value=_make_config()),

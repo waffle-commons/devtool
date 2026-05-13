@@ -1,16 +1,85 @@
-[ollama]
-endpoint = "http://localhost:11434"
+# RFC 017: Multi-provider LLM routing (Ollama + OpenAI-compatible APIs)
+# See: specs/RFCs/RFC_017_Cloud_ready.md
+
+[inference]
+# Global inference defaults (optional; can be overridden per model route)
 show_thoughts = true
 request_timeout = 300
-num_ctx = 8192
+
+[inference.default]
+# Default provider for all routes if not explicitly specified
+provider = "ollama"
+endpoint = "http://localhost:11434"
 keep_alive = "10m"
-num_ctx_fast = 4096
-num_ctx_coding = 8192
-num_ctx_review = 12288
-num_predict_fast = 512
-num_predict_coding = 4096
-num_predict_review = 4096
-num_predict_default = 4096
+
+# ============================================================================
+# EXAMPLE 1: Local Ollama (backward compatible - existing setup)
+# ============================================================================
+# [models]
+# default   = "gemma3n:e4b"
+# coding    = "qwen3-coder:latest"
+# fast      = "qwen3.5:0.8b"
+# review    = "qwen3-coder:latest"
+# embedding = "nomic-embed-text:latest"
+
+# ============================================================================
+# EXAMPLE 2: Remote Ollama + Local Embedding
+# ============================================================================
+# [inference.default]
+# provider = "ollama"
+# endpoint = "http://192.168.1.100:11434"  # Remote Ollama server
+# keep_alive = "10m"
+
+# [models]
+# default   = "gemma3n:e4b"
+# coding    = "qwen3-coder:latest"
+# fast      = "qwen3.5:0.8b"
+# review    = "qwen3-coder:latest"
+# embedding = "nomic-embed-text:latest"
+
+# ============================================================================
+# EXAMPLE 3: OpenAI-compatible API (e.g., vLLM, text-generation-webui)
+# ============================================================================
+# [inference.default]
+# provider = "openai"
+# endpoint = "http://localhost:8000"
+# api_key = "ENV:OPENAI_API_KEY"  # Read from environment variable for security
+
+# [models]
+# default   = "meta-llama/Llama-2-7b-chat"
+# coding    = "meta-llama/CodeLlama-34b-Instruct"
+# fast      = "mistral-7b-instruct"
+# review    = "meta-llama/CodeLlama-34b-Instruct"
+# embedding = "sentence-transformers/all-minilm-l6-v2"
+
+# ============================================================================
+# EXAMPLE 4: Mixed providers (OpenAI for chat, local Ollama for embedding)
+# ============================================================================
+# [inference.default]
+# provider = "openai"
+# endpoint = "https://api.openai.com/v1"
+# api_key = "ENV:OPENAI_API_KEY"
+
+# [inference.embedding]
+# provider = "ollama"
+# endpoint = "http://localhost:11434"
+# keep_alive = "10m"
+
+# [models]
+# default   = "gpt-4-turbo"
+# coding    = "gpt-4-turbo"
+# fast      = "gpt-3.5-turbo"
+# review    = "gpt-4-turbo"
+# embedding = "nomic-embed-text:latest"
+
+# ============================================================================
+# ACTUAL CONFIG: Uncomment and customize one of the examples above
+# ============================================================================
+
+[inference.default]
+provider = "ollama"
+endpoint = "http://localhost:11434"
+keep_alive = "10m"
 
 [models]
 default   = "gemma3n:e4b"

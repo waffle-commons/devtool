@@ -326,7 +326,7 @@ def _get_default_service() -> RAGService:
     global _default_service
     if _default_service is None:
         from ..config import load_config
-        from ..utils.ollama_client import OllamaEmbeddingModel
+        from ..utils.llm_client import OllamaEmbeddingModel
         from .faiss_store import FaissIndexStore
 
         config = load_config()
@@ -351,7 +351,7 @@ def build_index(
     *,
     progress_callback: Optional[ProgressCallback] = None,
 ) -> int:
-    from ..utils.ollama_client import OllamaEmbeddingModel
+    from ..utils.llm_client import OllamaEmbeddingModel
     from .faiss_store import FaissIndexStore
 
     svc = RAGService(embedder=OllamaEmbeddingModel(config), store=FaissIndexStore())
@@ -364,7 +364,7 @@ def update_index(
     *,
     progress_callback: Optional[ProgressCallback] = None,
 ) -> tuple[int, int, int]:
-    from ..utils.ollama_client import OllamaEmbeddingModel
+    from ..utils.llm_client import OllamaEmbeddingModel
     from .faiss_store import FaissIndexStore
 
     svc = RAGService(embedder=OllamaEmbeddingModel(config), store=FaissIndexStore())
@@ -378,7 +378,7 @@ def search(
     target_dir: str = ".",
     top_k: int = 5,
 ) -> list[dict[str, str]]:
-    from ..utils.ollama_client import OllamaEmbeddingModel
+    from ..utils.llm_client import OllamaEmbeddingModel
     from .faiss_store import FaissIndexStore
 
     svc = RAGService(embedder=OllamaEmbeddingModel(config), store=FaissIndexStore())

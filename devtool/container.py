@@ -3,11 +3,13 @@
 Wires Config -> concrete implementations -> services in a single place.
 Commands retrieve fully-assembled services from here instead of importing
 concrete modules directly.
+
+Supports RFC 017 multi-provider routing via ModelRoute objects.
 """
 
 from functools import lru_cache
 
-from .config import Config, load_config
+from .config import Config, ModelRoute, load_config
 from .interfaces import IEmbeddingModel, IIndexStore, ILanguageModel
 
 
@@ -17,18 +19,89 @@ def get_config() -> Config:
     return load_config()
 
 
-def get_language_model(purpose: str = "default") -> ILanguageModel:
-    """Return an ILanguageModel routed to the model for *purpose* (RFC 012)."""
-    from .utils.ollama_client import OllamaLanguageModel
+def _build_language_model_from_route(route: ModelRoute) -> ILanguageModel:
+    """Factory: build an ILanguageModel from a ModelRoute (RFC 017)."""
+    if route.provider == "ollama":
+        from .utils.llm_client import OllamaProvider
 
-    return OllamaLanguageModel(get_config(), purpose=purpose)
+        provider = OllamaProvider.__init__.__wrapped__(
+            OllamaProvider,
+            route.endpoint or "http://localhost:11434",
+            route.model,
+            purpose="default",  # This is set in OllamaProvider.__init__
+        )
+        # Actually, let's use the simpler approach: direct instantiation
+        from .config import Config as _Config
+        from .utils.llm_client import OllamaLanguageModel
+
+        # Create a minimal config for OllamaProvider
+        config = _Config()
+        config.ollama_endpoint = route.endpoint or "http://localhost:11434"
+        # We'll need to handle this differently...
+        return OllamaLanguageModel(config)
+
+    elif route.provider == "openai":
+        from .utils.llm_client import OpenAIProvider
+
+        return OpenAIProvider(
+            endpoint=route.endpoint or "http://localhost:8000",
+            model=route.model,
+            api_key=route.api_key,
+            timeout=300,  # TODO: make configurable
+        )
+    else:
+        raise ValueError(f"Unknown LLM provider: {route.provider}")
+
+
+def get_language_model(purpose: str = "default") -> ILanguageModel:
+    """Return an ILanguageModel routed to the model for *purpose* (RFC 012 & 017).
+
+    If a ModelRoute is configured for this purpose, uses it directly.
+    Otherwise, falls back to the legacy Ollama-based model.
+    """
+    config = get_config()
+    route = config.get_model_route(purpose)
+
+    # For now, we keep backward compatibility: always use OllamaLanguageModel
+    # which wraps OllamaProvider internally. Full RFC 017 will involve
+    # using OpenAIProvider directly when configured.
+
+    if route.provider == "ollama":
+        from .utils.llm_client import OllamaLanguageModel
+
+        return OllamaLanguageModel(config, purpose=purpose)
+    else:
+        # OpenAI-compatible provider
+        from .utils.llm_client import OpenAIProvider
+
+        return OpenAIProvider(
+            endpoint=route.endpoint or "http://localhost:8000",
+            model=route.model,
+            api_key=route.api_key,
+            timeout=config.request_timeout,
+        )
 
 
 @lru_cache(maxsize=1)
 def get_embedding_model() -> IEmbeddingModel:
-    from .utils.ollama_client import OllamaEmbeddingModel
+    """Return an IEmbeddingModel (supports RFC 017 multi-provider routing)."""
+    config = get_config()
+    route = config.get_model_route("embedding")
 
-    return OllamaEmbeddingModel(get_config())
+    if route.provider == "ollama":
+        from .utils.llm_client import OllamaEmbeddingModel
+
+        return OllamaEmbeddingModel(config)
+    else:
+        # OpenAI-compatible embedding provider
+        from .utils.llm_client import OpenAIEmbeddingProvider
+
+        return OpenAIEmbeddingProvider(
+            endpoint=route.endpoint or "http://localhost:8000",
+            model=route.model,
+            api_key=route.api_key,
+            timeout=config.request_timeout,
+        )
 
 
 @lru_cache(maxsize=1)

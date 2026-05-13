@@ -9,7 +9,7 @@ from rich.console import Console
 from ..container import get_config
 from ..stream import OllamaStreamProcessor
 from ..view import ReviewRenderer
-from . import ollama_client
+from . import llm_client
 
 console = Console()
 
@@ -69,7 +69,7 @@ def run_single_docgen(
         console.print(f"[dim]Existing doc found at {dest_path} — merging.[/dim]\n")
 
     try:
-        raw_stream = ollama_client.docgen_stream(
+        raw_stream = llm_client.docgen_stream(
             source_code=source_code,
             doc_type=type_key,
             language=language,

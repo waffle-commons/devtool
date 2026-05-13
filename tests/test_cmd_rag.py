@@ -455,7 +455,7 @@ class TestAskCommandErrorHandling:
 
     def test_ask_embedding_error_handling(self):
         """Test that OllamaEmbeddingError is handled gracefully."""
-        from devtool.utils.ollama_client import OllamaEmbeddingError
+        from devtool.utils.llm_client import OllamaEmbeddingError
 
         mock_rag = MagicMock()
         mock_rag.search.side_effect = OllamaEmbeddingError(
