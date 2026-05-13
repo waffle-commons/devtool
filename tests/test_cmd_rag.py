@@ -503,3 +503,69 @@ class TestAskCommandErrorHandling:
         assert context is not None
         assert "utils.py" in context
         assert "def helper" in context
+
+    def test_ask_with_threshold_filters_results(self, mocker):
+        """Test: --threshold flag filters results by max_distance (RFC 016)."""
+        _make_view_mock(mocker, "Answer.")
+        mocker.patch("devtool.commands.rag.OllamaStreamProcessor")
+
+        mock_rag = _make_rag_service_mock(
+            search_ret=[
+                {
+                    "file": "close.py",
+                    "text": "close match",
+                    "score": "0.2500",
+                    "line_start": 1,
+                    "line_end": 10,
+                }
+            ]
+        )
+        mock_gen = _make_gen_service_mock()
+
+        with (
+            patch("devtool.commands.rag.get_config", return_value=_make_config()),
+            patch("devtool.commands.rag.get_rag_service", return_value=mock_rag),
+            patch("devtool.commands.rag.get_generation_service", return_value=mock_gen),
+        ):
+            result = runner.invoke(app, ["ask", "Question?", "--threshold", "0.5"])
+
+        assert result.exit_code == 0
+        # Verify search was called with max_distance parameter
+        mock_rag.search.assert_called_once()
+        call_kwargs = mock_rag.search.call_args[1]
+        assert "max_distance" in call_kwargs
+        assert call_kwargs["max_distance"] == 0.5
+
+    def test_ask_below_threshold_shows_smart_message(self, mocker):
+        """Test: below-threshold results show helpful message (RFC 016)."""
+        # Mock search to return empty on first call (filtered), then non-empty on second (unfiltered)
+        mock_rag = MagicMock()
+        mock_rag.has_index.return_value = True
+
+        # First search with threshold: returns empty
+        # Second search without threshold: returns results
+        mock_rag.search.side_effect = [
+            [],  # First call with max_distance=0.3 (very strict)
+            [
+                {
+                    "file": "far.py",
+                    "text": "far match",
+                    "score": "0.8500",
+                    "line_start": 1,
+                    "line_end": 10,
+                }
+            ],  # Second call with max_distance=999 (all results)
+        ]
+
+        with (
+            patch("devtool.commands.rag.get_config", return_value=_make_config()),
+            patch("devtool.commands.rag.get_rag_service", return_value=mock_rag),
+        ):
+            result = runner.invoke(app, ["ask", "Question?", "--threshold", "0.3"])
+
+        assert result.exit_code == 0
+        # Should print threshold message
+        assert (
+            "confidence threshold" in result.output.lower()
+            or "threshold" in result.output.lower()
+        )

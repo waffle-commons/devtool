@@ -46,21 +46,48 @@ class TestFormatRagContext:
     def test_empty_results(self):
         assert RAGService.format_rag_context([]) == ""
 
-    def test_single_result(self):
-        results = [{"file": "foo.py", "text": "def foo(): pass"}]
-        output = RAGService.format_rag_context(results)
-        assert "Chunk 1" in output
-        assert "foo.py" in output
-        assert "def foo(): pass" in output
-
-    def test_multiple_results(self):
+    def test_single_result_rfc016_format(self):
+        """Test: format includes file, similarity score, and line numbers (RFC 016)."""
         results = [
-            {"file": "a.py", "text": "class A: pass"},
-            {"file": "b.py", "text": "class B: pass"},
+            {
+                "file": "foo.py",
+                "text": "def foo(): pass",
+                "score": "0.7521",
+                "line_start": 10,
+                "line_end": 15,
+            }
         ]
         output = RAGService.format_rag_context(results)
-        assert "Chunk 1" in output
-        assert "Chunk 2" in output
+        assert "File: foo.py" in output
+        assert "Similarity: 0.7521" in output
+        assert "Lines: 10-15" in output
+        assert "def foo(): pass" in output
+
+    def test_multiple_results_rfc016_format(self):
+        """Test: multiple results show each with metadata (RFC 016)."""
+        results = [
+            {
+                "file": "a.py",
+                "text": "class A: pass",
+                "score": "0.8500",
+                "line_start": 1,
+                "line_end": 5,
+            },
+            {
+                "file": "b.py",
+                "text": "class B: pass",
+                "score": "0.6200",
+                "line_start": 20,
+                "line_end": 25,
+            },
+        ]
+        output = RAGService.format_rag_context(results)
+        assert "File: a.py" in output
+        assert "Similarity: 0.8500" in output
+        assert "Lines: 1-5" in output
+        assert "File: b.py" in output
+        assert "Similarity: 0.6200" in output
+        assert "Lines: 20-25" in output
 
 
 # ── RAGService integration with fakes ────────────────────────────────────────
@@ -609,3 +636,87 @@ class TestRAGServiceUpdate:
         # Callback should have been called for new.py
         assert len(callbacks) >= 1
         assert any("new.py" in str(cb) for cb in callbacks)
+
+
+# ── RFC 016: max_distance filtering and confidence thresholds ─────────────────
+
+
+class TestSearchWithMaxDistance:
+    """Test suite for max_distance filtering (RFC 016)."""
+
+    def test_search_filters_by_max_distance(self, fake_embedder, tmp_path):
+        """Test: search() excludes results with distance > max_distance (RFC 016)."""
+        from unittest.mock import MagicMock
+
+        # Create a fake store that returns results with known distances
+        fake_store = MagicMock()
+        fake_store.exists.return_value = True
+
+        # Mock search results: (distance, index) tuples
+        # We'll return 3 results with distances 0.2, 0.5, 0.8
+        fake_store.search.return_value = [(0.2, 0), (0.5, 1), (0.8, 2)]
+
+        metadata = [
+            {"file": "close.py", "text": "close match", "line_start": 1, "line_end": 5},
+            {
+                "file": "med.py",
+                "text": "medium match",
+                "line_start": 10,
+                "line_end": 15,
+            },
+            {"file": "far.py", "text": "far match", "line_start": 20, "line_end": 25},
+        ]
+        fake_store.load.return_value = (None, metadata)
+
+        svc = RAGService(embedder=fake_embedder, store=fake_store)
+
+        # Search with max_distance=0.5 (should include dist 0.2 and 0.5, exclude 0.8)
+        results = svc.search("query", target_dir=str(tmp_path), max_distance=0.5)
+
+        assert len(results) == 2
+        assert results[0]["file"] == "close.py"
+        assert results[1]["file"] == "med.py"
+
+    def test_search_empty_when_all_below_threshold(self, fake_embedder, tmp_path):
+        """Test: search() returns empty list if all results exceed max_distance."""
+        from unittest.mock import MagicMock
+
+        fake_store = MagicMock()
+        fake_store.exists.return_value = True
+        fake_store.search.return_value = [(0.9, 0), (0.95, 1), (0.99, 2)]
+
+        metadata = [
+            {"file": "a.py", "text": "text", "line_start": 1, "line_end": 5},
+            {"file": "b.py", "text": "text", "line_start": 10, "line_end": 15},
+            {"file": "c.py", "text": "text", "line_start": 20, "line_end": 25},
+        ]
+        fake_store.load.return_value = (None, metadata)
+
+        svc = RAGService(embedder=fake_embedder, store=fake_store)
+
+        # Search with very strict threshold
+        results = svc.search("query", target_dir=str(tmp_path), max_distance=0.5)
+
+        assert len(results) == 0
+
+    def test_search_default_max_distance_no_filtering(self, fake_embedder, tmp_path):
+        """Test: default max_distance=inf includes all results (no filtering)."""
+        from unittest.mock import MagicMock
+
+        fake_store = MagicMock()
+        fake_store.exists.return_value = True
+        fake_store.search.return_value = [(0.2, 0), (0.5, 1), (0.99, 2)]
+
+        metadata = [
+            {"file": "a.py", "text": "close", "line_start": 1, "line_end": 5},
+            {"file": "b.py", "text": "medium", "line_start": 10, "line_end": 15},
+            {"file": "c.py", "text": "far", "line_start": 20, "line_end": 25},
+        ]
+        fake_store.load.return_value = (None, metadata)
+
+        svc = RAGService(embedder=fake_embedder, store=fake_store)
+
+        # Search with default threshold (should include all)
+        results = svc.search("query", target_dir=str(tmp_path))
+
+        assert len(results) == 3

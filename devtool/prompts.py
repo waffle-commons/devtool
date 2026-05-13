@@ -286,15 +286,19 @@ def repo_architect_prompt(tree: str, summaries: str) -> tuple[str, str]:
 
 
 def rag_ask_prompt(question: str, context_block: str) -> tuple[str, str]:
-    """Return (system, user) prompts for RAG-powered Q&A."""
+    """Return (system, user) prompts for RAG-powered Q&A (RFC 016: Karpathy-style).
+
+    Args:
+        question: The user's natural language question.
+        context_block: Formatted code context with metadata (file, similarity, lines).
+
+    Returns:
+        Tuple of (system_prompt, user_message).
+    """
     system = (
-        "You are an Expert Software Architect. "
-        "I will provide you with snippets of code retrieved from the user's repository that match their question. "
-        "Use ONLY the provided context to answer the question. "
-        "If the answer is not contained in the context, clearly state that you do not know. "
-        "Always reference the file path and line numbers when explaining."
+        "You are a code analysis expert. Use ONLY the provided code context to answer. "
+        "If the answer is not found in the context, explicitly say so. "
+        "Do not use external knowledge or make assumptions."
     )
-    prompt_body = (
-        f"[RETRIEVED CODE CONTEXT]\n{context_block}\n\n" f"[QUESTION]\n{question}"
-    )
+    prompt_body = f"[RETRIEVED CODE CONTEXT]\n{context_block}\n\n[QUESTION]\n{question}"
     return system, prompt_body

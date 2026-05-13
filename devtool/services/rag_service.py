@@ -133,11 +133,29 @@ class RAGService:
 
     @staticmethod
     def format_rag_context(results: list[dict[str, str]]) -> str:
+        """Format search results for display in prompts.
+
+        New format (RFC 016): includes similarity score and line numbers.
+
+        Args:
+            results: List of result dicts with 'file', 'text', 'score', and line metadata.
+
+        Returns:
+            Formatted context string.
+        """
         if not results:
             return ""
         parts: list[str] = []
         for i, r in enumerate(results, 1):
-            parts.append(f"--- Chunk {i} (file: {r['file']}) ---\n{r['text']}")
+            file_path = r.get("file", "unknown")
+            similarity = r.get("score", "0.0000")
+            line_start = r.get("line_start", "?")
+            line_end = r.get("line_end", "?")
+            text = r.get("text", "")
+
+            header = f"[File: {file_path} | Similarity: {similarity} | Lines: {line_start}-{line_end}]"
+            parts.append(f"{header}\n{text}")
+
         return "\n\n".join(parts)
 
     # -- Full build --------------------------------------------------------
@@ -294,7 +312,21 @@ class RAGService:
         *,
         target_dir: str = ".",
         top_k: int = 5,
+        max_distance: float = float("inf"),
     ) -> list[dict[str, str]]:
+        """Search for relevant code chunks by semantic similarity (RFC 016).
+
+        Args:
+            query: Natural language query or code snippet.
+            target_dir: Root directory containing the index (default ".").
+            top_k: Maximum number of results to return (default 5).
+            max_distance: Confidence threshold; exclude chunks with
+                distance > max_distance (default inf, no filtering for backward compatibility).
+
+        Returns:
+            List of result dicts with 'file', 'text', 'score', and other metadata.
+            Empty list if no chunks meet the threshold.
+        """
         root = Path(target_dir).resolve()
         store_path = str(root / VECTORSTORE_DIR)
 
@@ -307,11 +339,17 @@ class RAGService:
         query_vec = self._embedder.embed(query)
         raw_results = self._store.search(index, query_vec, top_k)
 
+        # Filter by max_distance (RFC 016: confidence threshold)
+        filtered_results = [
+            (dist, idx) for dist, idx in raw_results if dist <= max_distance
+        ]
+
         results: list[dict[str, str]] = []
-        for dist, idx in raw_results:
+        for dist, idx in filtered_results:
             entry = dict(metadata[idx])
             entry["score"] = f"{dist:.4f}"
             results.append(entry)
+
         return results
 
 
@@ -377,12 +415,15 @@ def search(
     *,
     target_dir: str = ".",
     top_k: int = 5,
+    max_distance: float = float("inf"),
 ) -> list[dict[str, str]]:
     from ..utils.llm_client import OllamaEmbeddingModel
     from .faiss_store import FaissIndexStore
 
     svc = RAGService(embedder=OllamaEmbeddingModel(config), store=FaissIndexStore())
-    return svc.search(query, target_dir=target_dir, top_k=top_k)
+    return svc.search(
+        query, target_dir=target_dir, top_k=top_k, max_distance=max_distance
+    )
 
 
 # Re-export constant for repo_analysis RAG path

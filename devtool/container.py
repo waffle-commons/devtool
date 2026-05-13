@@ -106,9 +106,20 @@ def get_embedding_model() -> IEmbeddingModel:
 
 @lru_cache(maxsize=1)
 def get_index_store() -> IIndexStore:
-    from .services.faiss_store import FaissIndexStore
+    """Return an IIndexStore implementation based on config.index_backend.
 
-    return FaissIndexStore()
+    Supports "faiss" (default) and "linear" (pure-Python fallback).
+    """
+    config = get_config()
+
+    if config.index_backend == "linear":
+        from .services.linear_store import LinearIndexStore
+
+        return LinearIndexStore()
+    else:  # default "faiss"
+        from .services.faiss_store import FaissIndexStore
+
+        return FaissIndexStore()
 
 
 @lru_cache(maxsize=1)

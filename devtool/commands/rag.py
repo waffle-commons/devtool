@@ -164,8 +164,15 @@ def ask_cmd(
         "-d",
         help="Root directory where the .devtool/vectorstore lives.",
     ),
+    threshold: float = typer.Option(
+        1.0,
+        "--threshold",
+        help="Confidence threshold (max distance); exclude chunks beyond this. "
+        "Default 1.0 is suitable for cosine similarity-based metrics (0-1 scale). "
+        "Use higher values for other distance metrics.",
+    ),
 ) -> None:
-    """Ask a semantic question against the indexed codebase."""
+    """Ask a semantic question against the indexed codebase (RFC 016)."""
     config = get_config()
     rag_svc = get_rag_service()
     gen_service = get_generation_service()
@@ -180,13 +187,37 @@ def ask_cmd(
             query=question,
             target_dir=target,
             top_k=top_k,
+            max_distance=threshold,
         )
     except FileNotFoundError as exc:
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(code=1)
 
     if not results:
-        console.print("[yellow]No relevant chunks found.[/yellow]")
+        # Check if this is due to confidence threshold filtering
+        # by searching again with very high threshold
+        try:
+            all_results = rag_svc.search(
+                query=question,
+                target_dir=target,
+                top_k=top_k,
+                max_distance=999.0,  # Very high; get all results
+            )
+            if all_results:
+                # Results exist but didn't meet threshold
+                best_distance = float(all_results[0]["score"])
+                console.print(
+                    f"[yellow]No chunks met confidence threshold (max distance: {threshold}). "
+                    f"Best match distance: {best_distance:.4f}. "
+                    f"Consider lowering --threshold.[/yellow]"
+                )
+            else:
+                # No results at all
+                console.print("[yellow]No relevant chunks found.[/yellow]")
+        except Exception:
+            # Fallback if second search fails
+            console.print("[yellow]No relevant chunks found.[/yellow]")
+
         raise typer.Exit(code=0)
 
     # Build context block from retrieved chunks

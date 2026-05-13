@@ -5,6 +5,8 @@
 # Global inference defaults (optional; can be overridden per model route)
 show_thoughts = true
 request_timeout = 300
+# RFC 016: Vector index backend selection
+index_backend = "faiss"  # or "linear" for pure-Python fallback (no numpy/faiss required)
 
 [inference.default]
 # Default provider for all routes if not explicitly specified

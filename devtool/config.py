@@ -111,6 +111,9 @@ class Config:
     num_predict_review: int = 4096  # reviews: structured but capped
     num_predict_default: int = 4096  # fallback
 
+    # ── Index backend selection (RFC 016) ────────────────────────────────────
+    index_backend: str = "faiss"  # "faiss" or "linear" (pure Python fallback)
+
     def resolve_model(self, purpose: str) -> str:
         """Return the model name for a given purpose, falling back to default."""
         mapping = {
@@ -180,6 +183,7 @@ _CONFIG_FIELDS: dict[str, tuple[str, type]] = {
     "num_predict_coding": ("num_predict_coding", int),
     "num_predict_review": ("num_predict_review", int),
     "num_predict_default": ("num_predict_default", int),
+    "index_backend": ("index_backend", str),
 }
 
 # ── [models] section: SINGLE SOURCE OF TRUTH for all model assignments ──────
