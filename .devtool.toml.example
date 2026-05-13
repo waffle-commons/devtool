@@ -1,4 +1,6 @@
+# RFC 012: Specialized Multi-Model Routing — task-specific model selection
 # RFC 017: Multi-provider LLM routing (Ollama + OpenAI-compatible APIs)
+# See: specs/RFCs/RFC_012_MultiModels_Routing.md
 # See: specs/RFCs/RFC_017_Cloud_ready.md
 
 [inference]
@@ -13,6 +15,31 @@ index_backend = "faiss"  # or "linear" for pure-Python fallback (no numpy/faiss 
 provider = "ollama"
 endpoint = "http://localhost:11434"
 keep_alive = "10m"
+
+# ============================================================================
+# RFC 012: Per-purpose context windows and output token limits
+# ============================================================================
+# Uncomment to customize. All values are OPTIONAL; defaults shown below.
+#
+# [ollama]
+# # Per-purpose context window sizes (in tokens)
+# # These control how much previous conversation history is retained per task
+# num_ctx_fast   = 4096     # commit messages: small context sufficient
+# num_ctx_coding = 8192     # testgen/docgen: medium context for file analysis
+# num_ctx_review = 12288    # code review/sec-audit: larger context for full review
+# num_ctx        = 8192     # fallback context window for other purposes
+#
+# # Per-purpose max output token limits (controls response length)
+# num_predict_fast    = 512     # commit messages: short, punchy output
+# num_predict_coding  = 4096    # testgen/docgen: longer structured output
+# num_predict_review  = 4096    # code review: capped at reasonable length
+# num_predict_default = 4096    # fallback max output tokens
+#
+# # How long to keep model loaded in VRAM after last request (reduces reload latency)
+# keep_alive = "10m"
+#
+# # Display model thinking tokens in output (RFC 010)
+# show_thoughts = true
 
 # ============================================================================
 # EXAMPLE 1: Local Ollama (backward compatible - existing setup)
@@ -77,6 +104,17 @@ keep_alive = "10m"
 # ============================================================================
 # ACTUAL CONFIG: Uncomment and customize one of the examples above
 # ============================================================================
+#
+# [models] section routes tasks to specialized models:
+#   - default   = Used by repo-architect, rag-ask, and as fallback for other purposes
+#   - coding    = Used by testgen and docgen
+#   - fast      = Used by commit messages and first-pass sec-audit analysis
+#   - review    = Used by pre-review and sec-audit detailed review
+#   - embedding = Used by RAG indexing and vector search
+#
+# If a specialized model key is missing, it falls back to 'default' model.
+# Each value can be a simple string ("model-name") or a full provider dict (RFC 017).
+#
 
 [inference.default]
 provider = "ollama"
