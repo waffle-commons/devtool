@@ -16,6 +16,10 @@ dependencies = [
     "tomli; python_version < '3.11'",
     "faiss-cpu",
     "numpy",
+    "tree-sitter>=0.21",
+    "tree-sitter-python>=0.21",
+    "tree-sitter-php>=0.21",
+    "tree-sitter-c-sharp>=0.21",
 ]
 
 [project.scripts]

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from ..interfaces import IEmbeddingModel, IIndexStore
+from .ast_chunker import chunk_file
 
 # ── Constants ────────────────────────────────────────────────────────────────
 
@@ -162,15 +163,15 @@ class RAGService:
                 continue
             relative = str(filepath.relative_to(root))
             file_mtime = filepath.stat().st_mtime
-            chunks = _chunk_text(content)
-            for idx, chunk in enumerate(chunks):
-                all_chunks.append(chunk)
+            ast_chunks = chunk_file(filepath, content)
+            for idx, chunk_dict in enumerate(ast_chunks):
+                all_chunks.append(chunk_dict["text"])
                 metadata.append(
                     {
                         "file": relative,
                         "chunk_index": idx,
-                        "text": chunk,
                         "mtime": file_mtime,
+                        **chunk_dict,
                     }
                 )
 
@@ -246,15 +247,15 @@ class RAGService:
             except Exception:
                 continue
             file_mtime = fp.stat().st_mtime
-            chunks = _chunk_text(content)
-            for idx, chunk in enumerate(chunks):
-                new_chunks.append(chunk)
+            ast_chunks = chunk_file(fp, content)
+            for idx, chunk_dict in enumerate(ast_chunks):
+                new_chunks.append(chunk_dict["text"])
                 new_metadata.append(
                     {
                         "file": rel,
                         "chunk_index": idx,
-                        "text": chunk,
                         "mtime": file_mtime,
+                        **chunk_dict,
                     }
                 )
 

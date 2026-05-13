@@ -83,6 +83,33 @@ class TestRAGServiceBuildAndSearch:
         assert len(results) >= 1
         assert results[0]["file"] == "hello.py"
 
+    def test_build_index_metadata_includes_ast_fields(
+        self, fake_embedder, fake_store, tmp_path
+    ):
+        """Verify that metadata dicts include AST fields: symbol_type, symbol_name, parent_class."""
+        src = tmp_path / "hello.py"
+        src.write_text("def hello(): return 'world'")
+
+        svc = RAGService(embedder=fake_embedder, store=fake_store)
+        svc.build_index(str(tmp_path))
+
+        # Access stored metadata via fake_store's internal storage
+        store_path = str((tmp_path / VECTORSTORE_DIR).resolve())
+        vectors, stored_metadata = fake_store._storage[store_path]
+
+        assert len(stored_metadata) > 0
+
+        # Each metadata dict should have the new AST fields
+        for meta in stored_metadata:
+            assert "file" in meta
+            assert "chunk_index" in meta
+            assert "mtime" in meta
+            assert "text" in meta
+            # New AST fields
+            assert "symbol_type" in meta
+            assert "symbol_name" in meta
+            assert "parent_class" in meta
+
     def test_build_empty_dir(self, fake_embedder, fake_store, tmp_path):
         svc = RAGService(embedder=fake_embedder, store=fake_store)
         total = svc.build_index(str(tmp_path))
