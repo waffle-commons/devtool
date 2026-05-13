@@ -90,14 +90,49 @@ def sec_audit_cmd(
     )
     console.print("[dim]This may take a while for large codebases.[/dim]\n")
 
-    # ── RAG cross-file context injection ─────────────────────────────────
+    # ── RAG cross-file context injection (two-pass) ─────────────────────
     rag_context: Optional[str] = None
     if use_rag:
-        code_snippet = code[:500].replace("\n", " ").strip()
-        query = f"Callers, usages, or inputs to: {code_snippet}"
-        rag_context = fetch_rag_context(
-            query, console, label="cross-file usage context"
+        console.print(
+            "[dim cyan]Pass 1: Identifying external function calls...[/dim cyan]"
         )
+        external_calls = gen_service.identify_external_calls(code)
+
+        if external_calls:
+            # Cap at 5 function names to avoid context explosion
+            external_calls = external_calls[:5]
+            console.print(
+                f"[dim cyan]Found {len(external_calls)} external call(s): {', '.join(external_calls)}[/dim cyan]"
+            )
+
+            # Pass 2: Retrieve definitions from RAG index
+            console.print(
+                "[dim cyan]Pass 2: Fetching definitions from RAG index...[/dim cyan]"
+            )
+
+            # Fetch context for each external call and aggregate
+            all_chunks = []
+            for call_name in external_calls:
+                query = f"Definition of {call_name}"
+                result = fetch_rag_context(
+                    query,
+                    console,
+                    top_k=3,
+                    label=f"definition of {call_name}",
+                )
+                if result:
+                    all_chunks.append(result)
+
+            # Aggregate all chunks into a single context
+            if all_chunks:
+                rag_context = "\n\n".join(all_chunks)
+                console.print(
+                    f"[dim cyan]Injected {len(all_chunks)} chunk(s) from external function definitions.[/dim cyan]"
+                )
+        else:
+            console.print(
+                "[dim cyan]No external function calls identified. Skipping RAG context injection.[/dim cyan]"
+            )
 
     console.print("[bold magenta]Security Audit Results:[/bold magenta]\n")
 

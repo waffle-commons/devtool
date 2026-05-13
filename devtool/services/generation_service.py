@@ -15,6 +15,7 @@ from ..interfaces import ILanguageModel
 from ..prompts import (
     commit_prompt,
     docgen_prompt,
+    identify_external_calls_prompt,
     pre_review_prompt,
     rag_ask_prompt,
     repo_architect_prompt,
@@ -67,6 +68,32 @@ class GenerationService:
         yield from self._review.stream(user, system)
 
     # ── Security Audit ───────────────────────────────────────────────────
+
+    def identify_external_calls(self, code: str) -> list[str]:
+        """Identify external function/method calls in code.
+
+        Used in the first pass of the two-pass sec-audit RAG flow.
+        Returns a list of external function names that are called but not
+        defined in the provided code snippet.
+
+        Args:
+            code: Source code to analyze.
+
+        Returns:
+            A list of function/method names (user-defined, external calls).
+            Returns an empty list on failure or if no external calls found.
+        """
+        system, user = identify_external_calls_prompt(code)
+        response = self._fast.generate(user, system)
+
+        if not response:
+            return []
+
+        # Parse the response: split by newline, strip whitespace, filter blanks and "NONE"
+        lines = [line.strip() for line in response.split("\n")]
+        calls = [line for line in lines if line and line.upper() != "NONE"]
+
+        return calls
 
     def sec_audit_stream(
         self,

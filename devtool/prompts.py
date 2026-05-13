@@ -122,6 +122,35 @@ def sec_audit_prompt(
     return system, prompt_body
 
 
+# ── External Call Identification (for two-pass sec-audit) ─────────────────
+
+
+def identify_external_calls_prompt(code: str) -> tuple[str, str]:
+    """Return (system, user) prompts for identifying external function/method calls.
+
+    This is used in the first pass of the two-pass sec-audit RAG flow.
+    The LLM analyzes code and returns a newline-separated list of external
+    function/method names that are called but not defined in the provided code.
+    """
+    system = (
+        "You are a code analysis expert. Your task is to identify all external function "
+        "and method calls in the provided code — that is, calls to functions/methods that "
+        "are NOT defined within this code snippet (they are defined elsewhere in the codebase). "
+        "\n\n"
+        "Return ONLY a newline-separated list of function/method names, one per line. "
+        "Exclude built-in functions (e.g., print, len, open), standard library calls, "
+        "and third-party library functions. Focus only on calls to user-defined code. "
+        "\n\n"
+        "Example output format:\n"
+        "authenticate_user\n"
+        "sanitize_input\n"
+        "validate_token\n"
+        "\n"
+        "If no external calls are found, output NONE."
+    )
+    return system, code
+
+
 # ── Diataxis Documentation ───────────────────────────────────────────────────
 
 _DIATAXIS_PROMPTS: dict[str, str] = {
