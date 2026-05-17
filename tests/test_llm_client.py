@@ -262,6 +262,47 @@ class TestOpenAIProvider:
         result = provider.generate("prompt", "system")
         assert result is None
 
+    @patch("devtool.utils.llm_client.requests.get")
+    def test_validate_endpoint_success(self, mock_get, provider):
+        """Test validate_endpoint returns True for healthy cloud API."""
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"data": [{"id": "gpt-3.5-turbo"}]}
+        mock_get.return_value = mock_response
+
+        assert provider.validate_endpoint() is True
+        mock_get.assert_called_once()
+        call_args = mock_get.call_args
+        assert "http://localhost:8000/v1/models" in call_args[0]
+        assert call_args.kwargs["headers"]["Authorization"] == "Bearer test-api-key"
+
+    @patch("devtool.utils.llm_client.requests.get")
+    def test_validate_endpoint_auth_failure(self, mock_get, provider):
+        """Test validate_endpoint raises on authentication failure."""
+        import requests
+
+        mock_response = MagicMock()
+        mock_response.status_code = 401
+        mock_get.side_effect = requests.exceptions.HTTPError(response=mock_response)
+
+        from devtool.utils.llm_client import OpenAIAuthenticationError
+
+        with pytest.raises(OpenAIAuthenticationError):
+            provider.validate_endpoint()
+
+    @patch("devtool.utils.llm_client.requests.get")
+    def test_validate_endpoint_connection_failure(self, mock_get):
+        """Test validate_endpoint returns False for unreachable cloud API."""
+        import requests
+
+        mock_get.side_effect = requests.exceptions.ConnectionError("Connection failed")
+
+        provider = OpenAIProvider(
+            endpoint="http://unreachable.example.com:8000",
+            model="claude-3-sonnet",
+            api_key="test-key",
+        )
+        assert provider.validate_endpoint() is False
+
 
 class TestOpenAIEmbeddingProvider:
     """Test OpenAIEmbeddingProvider."""

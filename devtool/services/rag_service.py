@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from ..interfaces import IEmbeddingModel, IIndexStore
+from ..utils.path_utils import is_ignored_path
 from .ast_chunker import chunk_file
 
 # ── Constants ────────────────────────────────────────────────────────────────
@@ -17,24 +18,8 @@ VECTORSTORE_DIR = ".devtool/vectorstore"
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 200
 
-_IGNORE_DIRS: frozenset[str] = frozenset(
-    {
-        "vendor",
-        "node_modules",
-        ".git",
-        "bin",
-        "obj",
-        "var",
-        "cache",
-        ".venv",
-        "venv",
-        "__pycache__",
-        "dist",
-        "build",
-        ".devtool",
-    }
-)
-
+# RAG indexes a broader set of files than `collect_source_files` (it also
+# embeds prose-like assets: yaml, json, md, etc.).
 _SOURCE_EXTENSIONS: frozenset[str] = frozenset(
     {
         ".py",
@@ -77,14 +62,10 @@ def _is_ignored_by_git(filepath: Path, root: Path) -> bool:
         return False
 
 
-def _should_skip_dir(dirname: str) -> bool:
-    return dirname in _IGNORE_DIRS
-
-
 def _collect_source_files(root: Path) -> list[Path]:
     files: list[Path] = []
     for item in sorted(root.rglob("*")):
-        if any(_should_skip_dir(part) for part in item.parts):
+        if is_ignored_path(item, root):
             continue
         if not item.is_file():
             continue
@@ -351,6 +332,77 @@ class RAGService:
             results.append(entry)
 
         return results
+
+    def search_with_confidence(
+        self,
+        query: str,
+        *,
+        target_dir: str = ".",
+        top_k: int = 5,
+        confidence_threshold: float = 0.5,
+    ) -> tuple[list[dict[str, str]], dict]:
+        """Search with confidence reporting (RFC 016 Transparency).
+
+        This method is the "transparent" version of search(), returning both results
+        and a confidence report showing how many chunks passed the threshold.
+
+        Args:
+            query: Natural language query or code snippet.
+            target_dir: Root directory containing the index (default ".").
+            top_k: Maximum number of candidates to evaluate (default 5).
+            confidence_threshold: Minimum similarity score (0.0-1.0). Only chunks
+                with (1 - distance) >= threshold are returned. Default 0.5.
+
+        Returns:
+            Tuple of:
+            - list[dict]: Results meeting the threshold (file, text, score, metadata)
+            - dict: Confidence report with keys:
+              - 'total_evaluated': number of chunks examined
+              - 'passed_threshold': number of chunks that met the threshold
+              - 'threshold': the confidence threshold used
+              - 'min_score': lowest score in results
+              - 'max_score': highest score in results
+
+        Raises:
+            FileNotFoundError: If index doesn't exist.
+        """
+        root = Path(target_dir).resolve()
+        store_path = str(root / VECTORSTORE_DIR)
+
+        if not self._store.exists(store_path):
+            raise FileNotFoundError(
+                "No vector index found. Run `devtool index` first to build one."
+            )
+
+        index, metadata = self._store.load(store_path)
+        query_vec = self._embedder.embed(query)
+        raw_results = self._store.search(index, query_vec, top_k)
+
+        # Convert distance to confidence (1 - distance, so 1.0 is perfect, 0.0 is terrible)
+        results: list[dict[str, str]] = []
+        min_score = float("inf")
+        max_score = 0.0
+
+        for dist, idx in raw_results:
+            confidence = 1.0 - dist  # Convert distance to similarity
+            if confidence >= confidence_threshold:
+                entry = dict(metadata[idx])
+                entry["score"] = f"{confidence:.4f}"
+                entry["distance"] = f"{dist:.4f}"
+                results.append(entry)
+                min_score = min(min_score, confidence)
+                max_score = max(max_score, confidence)
+
+        # Build confidence report
+        confidence_report = {
+            "total_evaluated": len(raw_results),
+            "passed_threshold": len(results),
+            "threshold": confidence_threshold,
+            "min_score": f"{min_score:.4f}" if min_score != float("inf") else "N/A",
+            "max_score": f"{max_score:.4f}" if max_score > 0.0 else "N/A",
+        }
+
+        return results, confidence_report
 
 
 # ── Backward-compatible module-level functions ───────────────────────────────

@@ -1,6 +1,8 @@
 """Tests for devtool.config — Config loading."""
 
-from devtool.config import Config, load_config
+import pytest
+
+from devtool.config import Config, ModelRoute, load_config
 
 
 class TestConfigDefaults:
@@ -81,3 +83,85 @@ default = "correct-model"
         assert config.ollama_model == "correct-model"
         captured = capsys.readouterr()
         assert "deprecated" in captured.err
+
+
+class TestModelRouteCloudAPIValidation:
+    """Tests for RFC 017 — Cloud API configuration validation."""
+
+    def test_model_route_ollama_simple_string(self):
+        """Simple string creates Ollama route."""
+        route = ModelRoute.from_config_value("my-model", "http://localhost:11434")
+        assert route.provider == "ollama"
+        assert route.model == "my-model"
+        assert route.endpoint == "http://localhost:11434"
+
+    def test_model_route_openai_dict_config(self):
+        """OpenAI dict config parses correctly."""
+        config = {
+            "provider": "openai",
+            "endpoint": "http://localhost:8000",
+            "model": "gpt-3.5-turbo",
+            "api_key": "sk-test-key",
+        }
+        route = ModelRoute.from_config_value(config, "http://localhost:11434")
+        assert route.provider == "openai"
+        assert route.model == "gpt-3.5-turbo"
+        assert route.api_key == "sk-test-key"
+
+    def test_model_route_openai_missing_model_raises(self):
+        """OpenAI config without explicit model raises ValueError."""
+        config = {
+            "provider": "openai",
+            "endpoint": "http://localhost:8000",
+            # Missing model — should use default "gemma4" which is invalid for OpenAI
+        }
+        with pytest.raises(
+            ValueError, match="OpenAI provider requires explicit model name"
+        ):
+            ModelRoute.from_config_value(config, "http://localhost:11434")
+
+    def test_model_route_openai_invalid_endpoint_raises(self):
+        """OpenAI config with invalid endpoint format raises ValueError."""
+        config = {
+            "provider": "openai",
+            "endpoint": "localhost:8000",  # Missing http:// or https://
+            "model": "gpt-3.5-turbo",
+        }
+        with pytest.raises(ValueError, match="must start with http:// or https://"):
+            ModelRoute.from_config_value(config, "http://localhost:11434")
+
+    def test_model_route_invalid_provider_raises(self):
+        """Invalid provider name raises ValueError."""
+        config = {
+            "provider": "invalid-provider",
+            "model": "some-model",
+        }
+        with pytest.raises(ValueError, match="must be 'ollama' or 'openai'"):
+            ModelRoute.from_config_value(config, "http://localhost:11434")
+
+    def test_model_route_openai_https_endpoint(self):
+        """OpenAI config with HTTPS endpoint is valid."""
+        config = {
+            "provider": "openai",
+            "endpoint": "https://api.openai.com",
+            "model": "gpt-4",
+        }
+        route = ModelRoute.from_config_value(config, "http://localhost:11434")
+        assert route.provider == "openai"
+        assert route.endpoint == "https://api.openai.com"
+        assert route.model == "gpt-4"
+
+    def test_model_route_openai_with_env_api_key(self):
+        """OpenAI config with ENV:KEY reference is expanded."""
+        import os
+
+        os.environ["TEST_OPENAI_KEY"] = "sk-test-12345"
+        config = {
+            "provider": "openai",
+            "endpoint": "http://localhost:8000",
+            "model": "claude-3-sonnet",
+            "api_key": "ENV:TEST_OPENAI_KEY",
+        }
+        route = ModelRoute.from_config_value(config, "http://localhost:11434")
+        assert route.api_key == "sk-test-12345"
+        del os.environ["TEST_OPENAI_KEY"]

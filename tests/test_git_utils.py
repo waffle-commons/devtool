@@ -34,7 +34,9 @@ class TestHasStagedChanges:
 
         assert result is True
         mock_run.assert_called_once_with(
-            ["git", "diff", "--cached", "--quiet"], capture_output=True, text=True
+            ["git", "diff", "--cached", "--quiet", "--"],
+            capture_output=True,
+            text=True,
         )
 
     def test_returns_false_when_returncode_is_0(self, mocker) -> None:
@@ -73,7 +75,10 @@ class TestGetStagedDiff:
 
         assert result == "diff --git a/foo.py\n+print('hello')"
         mock_run.assert_called_once_with(
-            ["git", "diff", "--staged"], capture_output=True, text=True, check=True
+            ["git", "diff", "--staged", "--"],
+            capture_output=True,
+            text=True,
+            check=True,
         )
 
     def test_returns_none_on_subprocess_error(self, mocker) -> None:
@@ -254,7 +259,7 @@ class TestGetBranchDiff:
         assert target == "HEAD"
         assert diff == "diff content"
         mock_run.assert_called_once_with(
-            ["git", "diff", "HEAD"], capture_output=True, text=True, check=True
+            ["git", "diff", "HEAD", "--"], capture_output=True, text=True, check=True
         )
 
     def test_uses_head_when_on_master_branch(self, mocker) -> None:
@@ -359,7 +364,7 @@ class TestGetBranchDiff:
         assert target == "HEAD"
         assert diff == "diff content"
         mock_run.assert_called_once_with(
-            ["git", "diff", "HEAD"], capture_output=True, text=True, check=True
+            ["git", "diff", "HEAD", "--"], capture_output=True, text=True, check=True
         )
 
     def test_returns_none_diff_on_subprocess_error_during_diff(self, mocker) -> None:
@@ -514,7 +519,7 @@ class TestGetModifiedFiles:
         assert "src/main.py" in result
         assert "test/test_main.py" in result
         mock_run.assert_called_once_with(
-            ["git", "diff", "--name-only", "HEAD"],
+            ["git", "diff", "--name-only", "HEAD", "--"],
             capture_output=True,
             text=True,
             check=True,
@@ -582,3 +587,71 @@ class TestGetModifiedFiles:
         assert len(result) == 2
         assert "src/subdir/file.py" in result
         assert "test/integration/test.py" in result
+
+
+# ── Audit Vuln 1: Git argument-injection defense (`--` terminator) ───────────
+#
+# Reference: specs/Audits/AIT-ALPHA1-AUDIT.md §3 Vulnerability 1.
+# Every `git diff` invocation MUST terminate with `--` so that a malicious
+# user-controlled ref (e.g. `--compare="--no-index"`) is parsed as a ref/path,
+# not as a Git flag.
+
+
+class TestGitArgumentInjectionDefense:
+    """Regression tests for audit Vuln 1: end-of-options `--` terminator."""
+
+    def test_has_staged_changes_appends_double_dash(self, mocker) -> None:
+        mock_run = mocker.patch("devtool.utils.git_utils.subprocess.run")
+        mock_run.return_value = MagicMock(returncode=1)
+
+        has_staged_changes()
+
+        cmd = mock_run.call_args[0][0]
+        assert cmd[-1] == "--", f"`--` terminator missing from {cmd!r}"
+
+    def test_get_staged_diff_appends_double_dash(self, mocker) -> None:
+        mock_run = mocker.patch("devtool.utils.git_utils.subprocess.run")
+        mock_run.return_value = MagicMock(stdout="")
+
+        get_staged_diff()
+
+        cmd = mock_run.call_args[0][0]
+        assert cmd[-1] == "--", f"`--` terminator missing from {cmd!r}"
+
+    def test_get_branch_diff_head_path_appends_double_dash(self, mocker) -> None:
+        mock_run = mocker.patch("devtool.utils.git_utils.subprocess.run")
+        mock_run.return_value = MagicMock(stdout="")
+
+        get_branch_diff(target_branch="HEAD")
+
+        cmd = mock_run.call_args[0][0]
+        assert cmd[-1] == "--", f"`--` terminator missing from {cmd!r}"
+
+    def test_get_branch_diff_user_supplied_ref_appends_double_dash(
+        self, mocker
+    ) -> None:
+        """Primary audit Vuln 1 regression: `--compare=<ref>` path."""
+        mock_run = mocker.patch("devtool.utils.git_utils.subprocess.run")
+        mock_run.side_effect = [
+            MagicMock(returncode=0),  # rev-parse succeeds
+            MagicMock(stdout="diff content\n"),  # git diff
+        ]
+
+        get_branch_diff(target_branch="develop")
+
+        diff_call_cmd = mock_run.call_args_list[1][0][0]
+        assert (
+            diff_call_cmd[-1] == "--"
+        ), f"`--` terminator missing from {diff_call_cmd!r}"
+        # And the user-controlled ref must precede the terminator
+        assert "develop...HEAD" in diff_call_cmd
+        assert diff_call_cmd.index("develop...HEAD") < diff_call_cmd.index("--")
+
+    def test_get_modified_files_appends_double_dash(self, mocker) -> None:
+        mock_run = mocker.patch("devtool.utils.git_utils.subprocess.run")
+        mock_run.return_value = MagicMock(stdout="")
+
+        get_modified_files()
+
+        cmd = mock_run.call_args[0][0]
+        assert cmd[-1] == "--", f"`--` terminator missing from {cmd!r}"

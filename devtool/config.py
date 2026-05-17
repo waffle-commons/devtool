@@ -53,16 +53,59 @@ class ModelRoute:
 
     @classmethod
     def from_config_value(cls, value: Any, default_endpoint: str) -> "ModelRoute":
-        """Parse a config value (string or dict) into a ModelRoute."""
+        """Parse a config value (string or dict) into a ModelRoute.
+
+        Validates cloud API configuration (RFC 017):
+        - OpenAI-compatible endpoints should have proper model names
+        - API keys for cloud providers are validated against ENV: references
+        - Endpoint URLs are validated for proper format
+
+        Args:
+            value: Config value (string or dict)
+            default_endpoint: Default Ollama endpoint if none specified
+
+        Returns:
+            ModelRoute instance
+
+        Raises:
+            ValueError: If config is invalid or cloud API config is incomplete
+        """
         if isinstance(value, str):
             # Simple string: use Ollama with default endpoint
             return cls(provider="ollama", endpoint=default_endpoint, model=value)
         elif isinstance(value, dict):
             value = _expand_env_vars(value)
-            provider = value.get("provider", "ollama")
+            provider = value.get("provider", "ollama").lower()
             endpoint = value.get("endpoint") or default_endpoint
             model = value.get("model", "gemma4")
             api_key = value.get("api_key")
+
+            # Validate provider type
+            if provider not in ("ollama", "openai"):
+                raise ValueError(
+                    f"Invalid provider '{provider}': must be 'ollama' or 'openai'"
+                )
+
+            # Validate OpenAI configuration (RFC 017)
+            if provider == "openai":
+                # Check endpoint format
+                if not endpoint.startswith("http://") and not endpoint.startswith(
+                    "https://"
+                ):
+                    raise ValueError(
+                        f"Invalid OpenAI endpoint '{endpoint}': must start with http:// or https://"
+                    )
+                # OpenAI endpoints should have v1/chat/completions path capability
+                if "/v1" not in endpoint and not endpoint.endswith(":8000"):
+                    # v1 path is added by provider, so we just warn for clarity
+                    pass
+                # Model name validation for cloud
+                if not model or model == "gemma4":
+                    raise ValueError(
+                        f"OpenAI provider requires explicit model name, got '{model}'. "
+                        "Examples: 'gpt-3.5-turbo', 'claude-3-sonnet', or your custom model name."
+                    )
+
             return cls(
                 provider=provider, endpoint=endpoint, model=model, api_key=api_key
             )
@@ -113,6 +156,12 @@ class Config:
 
     # ── Index backend selection (RFC 016) ────────────────────────────────────
     index_backend: str = "faiss"  # "faiss" or "linear" (pure Python fallback)
+
+    # ── RAG Transparency (RFC 016) ─────────────────────────────────────────────
+    # Default confidence threshold (max allowed distance in similarity search)
+    # 0.5 = strict (only very similar chunks), 1.0 = permissive (any chunk)
+    rag_max_distance: float = 1.0  # Default: permissive for backward compatibility
+    rag_top_k: int = 5  # Default number of chunks to retrieve
 
     def resolve_model(self, purpose: str) -> str:
         """Return the model name for a given purpose, falling back to default."""

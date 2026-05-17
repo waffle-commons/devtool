@@ -9,7 +9,9 @@ def has_staged_changes() -> bool:
     """Check if there are any staged files."""
     try:
         result = subprocess.run(
-            ["git", "diff", "--cached", "--quiet"], capture_output=True, text=True
+            ["git", "diff", "--cached", "--quiet", "--"],
+            capture_output=True,
+            text=True,
         )
         return result.returncode == 1
     except subprocess.SubprocessError:
@@ -20,7 +22,10 @@ def get_staged_diff() -> Optional[str]:
     """Retrieve the staged diff."""
     try:
         result = subprocess.run(
-            ["git", "diff", "--staged"], capture_output=True, text=True, check=True
+            ["git", "diff", "--staged", "--"],
+            capture_output=True,
+            text=True,
+            check=True,
         )
         return result.stdout.strip()
     except subprocess.SubprocessError:
@@ -91,7 +96,10 @@ def get_branch_diff(
     try:
         if target_branch == "HEAD":
             result = subprocess.run(
-                ["git", "diff", "HEAD"], capture_output=True, text=True, check=True
+                ["git", "diff", "HEAD", "--"],
+                capture_output=True,
+                text=True,
+                check=True,
             )
             return result.stdout.strip(), "HEAD"
 
@@ -102,7 +110,7 @@ def get_branch_diff(
             return None, target_branch
 
         result = subprocess.run(
-            ["git", "diff", f"{target_branch}...HEAD"],
+            ["git", "diff", f"{target_branch}...HEAD", "--"],
             capture_output=True,
             text=True,
             check=True,
@@ -132,7 +140,7 @@ def get_modified_files() -> list[str]:
     """Retrieve a list of uniquely modified and staged files."""
     try:
         diff_res = subprocess.run(
-            ["git", "diff", "--name-only", "HEAD"],
+            ["git", "diff", "--name-only", "HEAD", "--"],
             capture_output=True,
             text=True,
             check=True,
