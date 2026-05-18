@@ -2,7 +2,7 @@
 
 from enum import Enum
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from rich.console import Console
 
@@ -10,6 +10,9 @@ from ..container import get_config
 from ..stream import OllamaStreamProcessor
 from ..view import ReviewRenderer
 from . import llm_client
+
+if TYPE_CHECKING:
+    from ..config import Config
 
 console = Console()
 
@@ -39,7 +42,7 @@ def run_single_docgen(
     stem: str,
     output_dir: Path,
     context_hint: str,
-    config: object = None,
+    config: "Config | None" = None,
 ) -> dict:
     """Generate (or update) a single Diataxis document and auto-save it.
 

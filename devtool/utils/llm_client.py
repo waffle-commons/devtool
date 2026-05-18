@@ -389,6 +389,33 @@ class OpenAIProvider(ILLMProvider):
         """Currently resolved model name (useful for UI display)."""
         return self._model
 
+    def validate_endpoint(self) -> bool:
+        """Validate that the cloud endpoint is reachable and properly configured.
+
+        Returns:
+            True if endpoint is reachable, False otherwise.
+
+        Raises:
+            OpenAIAuthenticationError: If authentication fails (401/403).
+        """
+        url = f"{self._endpoint.rstrip('/')}/v1/models"
+        headers = {}
+        if self._api_key:
+            headers["Authorization"] = f"Bearer {self._api_key}"
+
+        try:
+            response = requests.get(
+                url, headers=headers, timeout=min(10, self._timeout)
+            )
+            response.raise_for_status()
+            return True
+        except requests.exceptions.HTTPError as e:
+            if e.response is not None and e.response.status_code in (401, 403):
+                raise OpenAIAuthenticationError(self._endpoint) from e
+            raise
+        except requests.exceptions.RequestException:
+            return False
+
     def generate(self, prompt: str, system: str) -> Optional[str]:
         url = f"{self._endpoint.rstrip('/')}/v1/chat/completions"
         headers = {"Content-Type": "application/json"}
@@ -414,6 +441,19 @@ class OpenAIProvider(ILLMProvider):
             choices = data.get("choices", [])
             if choices:
                 return choices[0].get("message", {}).get("content", "").strip()
+            return None
+        except requests.exceptions.HTTPError as e:
+            # Provide helpful context for cloud API authentication failures
+            if e.response is not None and e.response.status_code in (401, 403):
+                _err_console.print(
+                    f"[bold red]✗ Authentication Failed (HTTP {e.response.status_code}):[/bold red]\n"
+                    f"  Endpoint: [cyan]{self._endpoint}[/cyan]\n"
+                    f"  Model: [cyan]{self._model}[/cyan]\n"
+                    "  → Check that your API key is valid and has access to this model.\n"
+                    "  → For PrivAiTe: ensure ENV:PRIVAITE_API_KEY is set correctly."
+                )
+            else:
+                _handle_request_exception(e, url)
             return None
         except requests.exceptions.RequestException as e:
             _handle_request_exception(e, url)
@@ -582,9 +622,9 @@ def testgen_code_stream(
     existing_test_content: Optional[str] = None,
     rag_context: Optional[str] = None,
 ) -> Iterator[str]:
-    from ..prompts import testgen_prompt
+    from ..prompts import gen_test_prompt
 
-    system, user = testgen_prompt(
+    system, user = gen_test_prompt(
         source_code,
         language,
         framework,

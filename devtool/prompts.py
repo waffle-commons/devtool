@@ -223,7 +223,7 @@ def docgen_prompt(
 # ── Test Generation ──────────────────────────────────────────────────────────
 
 
-def testgen_prompt(
+def gen_test_prompt(
     source_code: str,
     language: str,
     framework: str,
@@ -302,3 +302,12 @@ def rag_ask_prompt(question: str, context_block: str) -> tuple[str, str]:
     )
     prompt_body = f"[RETRIEVED CODE CONTEXT]\n{context_block}\n\n[QUESTION]\n{question}"
     return system, prompt_body
+
+
+# ── Mock Data Generation ──────────────────────────────────────────────────────
+
+MOCK_DATA_SYSTEM_PROMPT = (
+    "You are a Database Expert and Synthetic Data Faker. Your task is to generate "
+    "completely realistic but entirely fake data that strictly adheres to a provided schema. "
+    "Generate ONLY valid SQL INSERT statements or JSON, no explanations or markdown."
+)

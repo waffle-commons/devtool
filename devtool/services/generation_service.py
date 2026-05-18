@@ -15,13 +15,13 @@ from ..interfaces import ILanguageModel
 from ..prompts import (
     commit_prompt,
     docgen_prompt,
+    gen_test_prompt,
     identify_external_calls_prompt,
     pre_review_prompt,
     rag_ask_prompt,
     repo_architect_prompt,
     sec_audit_prompt,
     summarize_file_prompt,
-    testgen_prompt,
 )
 
 
@@ -138,7 +138,7 @@ class GenerationService:
         rag_context: Optional[str] = None,
     ) -> Iterator[str]:
         """Stream unit test generation."""
-        system, user = testgen_prompt(
+        system, user = gen_test_prompt(
             source_code,
             language,
             framework,
@@ -165,3 +165,30 @@ class GenerationService:
         """Stream a RAG-powered answer."""
         system, user = rag_ask_prompt(question, context_block)
         yield from self._default.stream(user, system)
+
+    # ── Generic Text Generation ──────────────────────────────────────────
+
+    def generate_text(
+        self,
+        prompt: str,
+        system: str,
+        purpose: str = "default",
+    ) -> Optional[str]:
+        """Generate text using a specific model based on purpose.
+
+        Args:
+            prompt: The user prompt.
+            system: The system prompt.
+            purpose: Model selection ('fast', 'coding', 'review', 'default').
+
+        Returns:
+            Generated text or None if failed.
+        """
+        model_map = {
+            "fast": self._fast,
+            "coding": self._coding,
+            "review": self._review,
+            "default": self._default,
+        }
+        model = model_map.get(purpose, self._default)
+        return model.generate(prompt, system)

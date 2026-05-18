@@ -1,6 +1,6 @@
 """Tests for devtool.commands.debug_ollama — debug-ollama command."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from typer.testing import CliRunner
 
@@ -22,13 +22,6 @@ def _make_config() -> Config:
         show_thoughts=False,
         request_timeout=10,
     )
-
-
-def _make_llm_mock(models=None):
-    """Create a mock ILanguageModel with optional list_models response."""
-    mock_llm = MagicMock()
-    mock_llm.list_models.return_value = models
-    return mock_llm
 
 
 class TestDebugOllamaCommand:
@@ -59,13 +52,12 @@ class TestDebugOllamaCommand:
                 "modified_at": "2025-05-07T16:45:00Z",
             },
         ]
-        mock_llm = _make_llm_mock(models=models)
 
         with (
             patch("devtool.commands.debug_ollama.get_config", return_value=config),
             patch(
-                "devtool.commands.debug_ollama.get_language_model",
-                return_value=mock_llm,
+                "devtool.commands.debug_ollama.llm_client.list_models",
+                return_value=models,
             ),
         ):
             result = runner.invoke(app, ["debug-ollama"])
@@ -77,13 +69,12 @@ class TestDebugOllamaCommand:
     def test_ollama_unreachable(self) -> None:
         """Test: Ollama unreachable (list_models returns None) -> exits with code 1."""
         config = _make_config()
-        mock_llm = _make_llm_mock(models=None)
 
         with (
             patch("devtool.commands.debug_ollama.get_config", return_value=config),
             patch(
-                "devtool.commands.debug_ollama.get_language_model",
-                return_value=mock_llm,
+                "devtool.commands.debug_ollama.llm_client.list_models",
+                return_value=None,
             ),
         ):
             result = runner.invoke(app, ["debug-ollama"])
@@ -93,13 +84,12 @@ class TestDebugOllamaCommand:
     def test_no_models_installed(self) -> None:
         """Test: no models installed (empty list) -> exits with code 1, suggests `ollama pull`."""
         config = _make_config()
-        mock_llm = _make_llm_mock(models=[])
 
         with (
             patch("devtool.commands.debug_ollama.get_config", return_value=config),
             patch(
-                "devtool.commands.debug_ollama.get_language_model",
-                return_value=mock_llm,
+                "devtool.commands.debug_ollama.llm_client.list_models",
+                return_value=[],
             ),
         ):
             result = runner.invoke(app, ["debug-ollama"])
@@ -119,13 +109,12 @@ class TestDebugOllamaCommand:
                 "modified_at": "2025-05-10T12:00:00Z",
             },
         ]
-        mock_llm = _make_llm_mock(models=models)
 
         with (
             patch("devtool.commands.debug_ollama.get_config", return_value=config),
             patch(
-                "devtool.commands.debug_ollama.get_language_model",
-                return_value=mock_llm,
+                "devtool.commands.debug_ollama.llm_client.list_models",
+                return_value=models,
             ),
         ):
             result = runner.invoke(app, ["debug-ollama"])
@@ -153,13 +142,12 @@ class TestDebugOllamaCommand:
                 "modified_at": "2025-05-07T16:45:00Z",
             },
         ]
-        mock_llm = _make_llm_mock(models=models)
 
         with (
             patch("devtool.commands.debug_ollama.get_config", return_value=config),
             patch(
-                "devtool.commands.debug_ollama.get_language_model",
-                return_value=mock_llm,
+                "devtool.commands.debug_ollama.llm_client.list_models",
+                return_value=models,
             ),
         ):
             result = runner.invoke(app, ["debug-ollama"])
@@ -179,13 +167,12 @@ class TestDebugOllamaCommand:
                 "modified_at": "2025-05-10T12:00:00Z",
             },
         ]
-        mock_llm = _make_llm_mock(models=models)
 
         with (
             patch("devtool.commands.debug_ollama.get_config", return_value=config),
             patch(
-                "devtool.commands.debug_ollama.get_language_model",
-                return_value=mock_llm,
+                "devtool.commands.debug_ollama.llm_client.list_models",
+                return_value=models,
             ),
         ):
             result = runner.invoke(app, ["debug-ollama"])
@@ -211,13 +198,12 @@ class TestDebugOllamaCommand:
                 "modified_at": "2025-05-09T10:30:00Z",
             },
         ]
-        mock_llm = _make_llm_mock(models=models)
 
         with (
             patch("devtool.commands.debug_ollama.get_config", return_value=config),
             patch(
-                "devtool.commands.debug_ollama.get_language_model",
-                return_value=mock_llm,
+                "devtool.commands.debug_ollama.llm_client.list_models",
+                return_value=models,
             ),
         ):
             result = runner.invoke(app, ["debug-ollama"])
@@ -233,7 +219,6 @@ class TestDebugOllamaCommand:
 
     def test_model_matching_is_case_insensitive(self) -> None:
         """Test: model matching ignores case and handles tags properly."""
-        config = _make_config()
         # Config has "Deepseek-Coder" but installed is "deepseek-coder:latest"
         config = Config(
             ollama_endpoint="http://localhost:11434",
@@ -267,13 +252,12 @@ class TestDebugOllamaCommand:
                 "modified_at": "2025-05-07T16:45:00Z",
             },
         ]
-        mock_llm = _make_llm_mock(models=models)
 
         with (
             patch("devtool.commands.debug_ollama.get_config", return_value=config),
             patch(
-                "devtool.commands.debug_ollama.get_language_model",
-                return_value=mock_llm,
+                "devtool.commands.debug_ollama.llm_client.list_models",
+                return_value=models,
             ),
         ):
             result = runner.invoke(app, ["debug-ollama"])

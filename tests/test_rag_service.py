@@ -8,6 +8,9 @@ import pytest
 
 from devtool.services.rag_service import VECTORSTORE_DIR, RAGService, _chunk_text
 
+# Mark entire module as slow tests
+pytestmark = pytest.mark.slow
+
 # ── _chunk_text ──────────────────────────────────────────────────────────────
 
 
@@ -720,3 +723,72 @@ class TestSearchWithMaxDistance:
         results = svc.search("query", target_dir=str(tmp_path))
 
         assert len(results) == 3
+
+    def test_search_with_confidence_returns_report(self, fake_embedder, tmp_path):
+        """Test search_with_confidence returns both results and confidence report."""
+        from unittest.mock import MagicMock
+
+        (tmp_path / "test.py").write_text("def hello(): pass")
+
+        fake_store = MagicMock()
+        fake_store.exists.return_value = True
+        # Mock search results: distances 0.1 (high confidence), 0.4 (medium), 0.8 (low)
+        fake_store.search.return_value = [
+            (0.1, 0),  # confidence = 0.9
+            (0.4, 1),  # confidence = 0.6
+            (0.8, 2),  # confidence = 0.2
+        ]
+        metadata = [
+            {"file": "a.py", "text": "high", "line_start": 1, "line_end": 5},
+            {"file": "b.py", "text": "medium", "line_start": 10, "line_end": 15},
+            {"file": "c.py", "text": "low", "line_start": 20, "line_end": 25},
+        ]
+        fake_store.load.return_value = (None, metadata)
+
+        svc = RAGService(embedder=fake_embedder, store=fake_store)
+
+        # Search with threshold 0.5 (should exclude the lowest)
+        results, report = svc.search_with_confidence(
+            "query", target_dir=str(tmp_path), confidence_threshold=0.5
+        )
+
+        assert len(results) == 2  # Only first two pass threshold
+        assert results[0]["score"] == "0.9000"  # Confidence = 1 - distance
+        assert results[1]["score"] == "0.6000"
+
+        assert report["total_evaluated"] == 3
+        assert report["passed_threshold"] == 2
+        assert report["threshold"] == 0.5
+        assert report["max_score"] == "0.9000"
+        assert report["min_score"] == "0.6000"
+
+    def test_search_with_confidence_all_below_threshold(self, fake_embedder, tmp_path):
+        """Test search_with_confidence when no results meet threshold."""
+        from unittest.mock import MagicMock
+
+        (tmp_path / "test.py").write_text("def hello(): pass")
+
+        fake_store = MagicMock()
+        fake_store.exists.return_value = True
+        # All distances are high (low confidence)
+        fake_store.search.return_value = [
+            (0.9, 0),  # confidence = 0.1
+            (0.95, 1),  # confidence = 0.05
+        ]
+        metadata = [
+            {"file": "a.py", "text": "low", "line_start": 1, "line_end": 5},
+            {"file": "b.py", "text": "lower", "line_start": 10, "line_end": 15},
+        ]
+        fake_store.load.return_value = (None, metadata)
+
+        svc = RAGService(embedder=fake_embedder, store=fake_store)
+
+        # Search with high threshold
+        results, report = svc.search_with_confidence(
+            "query", target_dir=str(tmp_path), confidence_threshold=0.8
+        )
+
+        assert len(results) == 0
+        assert report["passed_threshold"] == 0
+        assert report["total_evaluated"] == 2
+        assert report["min_score"] == "N/A"

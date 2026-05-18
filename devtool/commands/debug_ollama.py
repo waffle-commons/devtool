@@ -5,7 +5,8 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from ..container import get_config, get_language_model
+from ..container import get_config
+from ..utils import llm_client
 
 console = Console()
 
@@ -13,7 +14,6 @@ console = Console()
 def debug_ollama_cmd() -> None:
     """Diagnose the Ollama connection and verify that the configured model is installed."""
     config = get_config()
-    llm = get_language_model("default")
 
     console.print(
         Panel.fit(
@@ -30,7 +30,7 @@ def debug_ollama_cmd() -> None:
     console.print(
         "\n[blue]Connecting to Ollama and fetching installed models...[/blue]"
     )
-    models = llm.list_models()
+    models = llm_client.list_models(config)
 
     if models is None:
         raise typer.Exit(code=1)

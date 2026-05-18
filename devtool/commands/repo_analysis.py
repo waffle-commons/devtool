@@ -18,7 +18,7 @@ from ..container import get_config, get_generation_service, get_rag_service
 from ..services.rag_service import METADATA_FILE, VECTORSTORE_DIR
 from ..stream import OllamaStreamProcessor
 from ..utils.language_utils import LANGUAGE_MAPPING
-from ..utils.path_utils import _IGNORE_DIRS
+from ..utils.path_utils import is_ignored_path
 from ..view import ReviewRenderer
 
 console = Console()
@@ -117,7 +117,7 @@ def repo_analysis_cmd(
                     gitignore_patterns.append(line)
 
         def is_ignored(path: Path) -> bool:
-            if any(part in _IGNORE_DIRS for part in path.parts):
+            if is_ignored_path(path, target):
                 return True
             try:
                 rel_path = path.relative_to(target).as_posix()
@@ -187,8 +187,8 @@ def repo_analysis_cmd(
             raise typer.Exit(code=1)
 
         tree_lines: list[str] = []
-        for f in valid_files:
-            tree_lines.append(f.relative_to(target).as_posix())
+        for file_path in valid_files:
+            tree_lines.append(file_path.relative_to(target).as_posix())
         tree_structure = "\n".join(tree_lines)
 
         all_summaries = "\n\n".join(file_summaries)

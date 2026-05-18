@@ -5,7 +5,7 @@ enabling testability and backend-swapping.
 """
 
 from abc import ABC, abstractmethod
-from typing import Iterator, Optional
+from typing import Any, Iterator, Optional
 
 
 class ILanguageModel(ABC):
@@ -42,13 +42,13 @@ class IIndexStore(ABC):
         ...
 
     @abstractmethod
-    def load(self, store_path: str) -> tuple[object, list[dict]]:
+    def load(self, store_path: str) -> tuple[Any, list[dict]]:
         """Load index + metadata from disk. Returns (index_handle, metadata)."""
         ...
 
     @abstractmethod
     def search(
-        self, index: object, query_vector: list[float], top_k: int
+        self, index: Any, query_vector: list[float], top_k: int
     ) -> list[tuple[float, int]]:
         """Search *index* for nearest neighbours. Returns list of (distance, id)."""
         ...

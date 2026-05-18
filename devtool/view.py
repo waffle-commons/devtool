@@ -1,4 +1,4 @@
-from rich.console import Console, Group
+from rich.console import Console, Group, RenderableType
 from rich.live import Live
 from rich.markdown import Markdown
 from rich.panel import Panel
@@ -15,9 +15,9 @@ class ReviewRenderer:
         self.config = config
         self.console = console
 
-    def _generate_ui(self, state: ReviewState):
+    def _generate_ui(self, state: ReviewState) -> RenderableType:
         """Constructs Rich elements dynamically based on state."""
-        elements = []
+        elements: list[Panel | Markdown] = []
         if state.thinking and self.config.show_thoughts:
             think_text = Text(state.thinking, style="dim cyan italic")
             elements.append(
