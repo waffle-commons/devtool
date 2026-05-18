@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "devtool"
-version = "0.1.0-alpha2"
+version = "0.1.0-alpha3"
 description = "A privacy-first, local CLI tool powered by Ollama"
 authors = [{name = "AI Developer"}]
 readme = "README.md"

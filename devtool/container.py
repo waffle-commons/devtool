@@ -9,7 +9,7 @@ Supports RFC 017 multi-provider routing via ModelRoute objects.
 
 from functools import lru_cache
 
-from .config import Config, ModelRoute, load_config
+from .config import Config, load_config
 from .interfaces import IEmbeddingModel, IIndexStore, ILanguageModel
 
 
@@ -17,40 +17,6 @@ from .interfaces import IEmbeddingModel, IIndexStore, ILanguageModel
 def get_config() -> Config:
     """Cached config singleton."""
     return load_config()
-
-
-def _build_language_model_from_route(route: ModelRoute) -> ILanguageModel:
-    """Factory: build an ILanguageModel from a ModelRoute (RFC 017)."""
-    if route.provider == "ollama":
-        from .utils.llm_client import OllamaProvider
-
-        provider = OllamaProvider.__init__.__wrapped__(
-            OllamaProvider,
-            route.endpoint or "http://localhost:11434",
-            route.model,
-            purpose="default",  # This is set in OllamaProvider.__init__
-        )
-        # Actually, let's use the simpler approach: direct instantiation
-        from .config import Config as _Config
-        from .utils.llm_client import OllamaLanguageModel
-
-        # Create a minimal config for OllamaProvider
-        config = _Config()
-        config.ollama_endpoint = route.endpoint or "http://localhost:11434"
-        # We'll need to handle this differently...
-        return OllamaLanguageModel(config)
-
-    elif route.provider == "openai":
-        from .utils.llm_client import OpenAIProvider
-
-        return OpenAIProvider(
-            endpoint=route.endpoint or "http://localhost:8000",
-            model=route.model,
-            api_key=route.api_key,
-            timeout=300,  # TODO: make configurable
-        )
-    else:
-        raise ValueError(f"Unknown LLM provider: {route.provider}")
 
 
 def get_language_model(purpose: str = "default") -> ILanguageModel:
