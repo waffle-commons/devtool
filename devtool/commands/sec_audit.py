@@ -10,6 +10,7 @@ from ..container import get_config, get_generation_service
 from ..stream import OllamaStreamProcessor
 from ..utils import git_utils
 from ..utils.path_utils import collect_source_files
+from ..utils.secrets_scanner import SecretsScanner
 from ..view import ReviewRenderer
 from ._rag_helpers import fetch_rag_context
 
@@ -72,6 +73,22 @@ def sec_audit_cmd(
                 )
                 raise typer.Exit(code=0)
             target_label = f"directory '{target}'"
+
+    # ── RFC 014: Pre-LLM secrets scanner ──────────────────────────────────────
+    console.print("[blue]Scanning for exposed secrets...[/blue]")
+    scanner = SecretsScanner()
+    secrets = scanner.scan(code)
+    if secrets:
+        console.print("[bold red]✗ FATAL: Secrets detected in code![/bold red]")
+        for secret in secrets:
+            console.print(
+                f"  Line {secret.line_number}: {secret.pattern_name} detected "
+                f"(value: {secret.value}...)"
+            )
+        console.print(
+            "[yellow]Tip: Add patterns to .devtool-ignore-secrets to bypass false positives.[/yellow]"
+        )
+        raise typer.Exit(code=1)
 
     # ── 2. Optional size warning ─────────────────────────────────────────────
     if git_utils.is_diff_massive(code):

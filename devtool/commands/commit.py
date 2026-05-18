@@ -6,6 +6,7 @@ from rich.console import Console
 
 from ..container import get_config, get_generation_service
 from ..utils import git_utils
+from ..utils.secrets_scanner import SecretsScanner
 
 console = Console()
 
@@ -29,6 +30,24 @@ def commit_cmd() -> None:
     diff = git_utils.get_staged_diff()
     if not diff:
         console.print("[red]Failed to extract staged diff.[/red]")
+        raise typer.Exit(code=1)
+
+    # RFC 014: Pre-LLM secrets scanner
+    console.print("[blue]Scanning for exposed secrets...[/blue]")
+    scanner = SecretsScanner()
+    secrets = scanner.scan(diff)
+    if secrets:
+        console.print(
+            "[bold red]✗ FATAL: Secrets detected in staged changes![/bold red]"
+        )
+        for secret in secrets:
+            console.print(
+                f"  Line {secret.line_number}: {secret.pattern_name} detected "
+                f"(value: {secret.value}...)"
+            )
+        console.print(
+            "[yellow]Tip: Add patterns to .devtool-ignore-secrets to bypass false positives.[/yellow]"
+        )
         raise typer.Exit(code=1)
 
     console.print(

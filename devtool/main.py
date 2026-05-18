@@ -47,3 +47,11 @@ from .commands.rag import ask_cmd, index_cmd
 
 app.command("index")(index_cmd)
 app.command("ask")(ask_cmd)
+
+from .commands.anonymize import anonymize_cmd
+
+app.command("anonymize")(anonymize_cmd)
+
+from .commands.mock_data import mock_data_cmd
+
+app.command("mock-data")(mock_data_cmd)
