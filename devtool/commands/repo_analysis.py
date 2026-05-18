@@ -187,8 +187,8 @@ def repo_analysis_cmd(
             raise typer.Exit(code=1)
 
         tree_lines: list[str] = []
-        for f in valid_files:
-            tree_lines.append(f.relative_to(target).as_posix())
+        for file_path in valid_files:
+            tree_lines.append(file_path.relative_to(target).as_posix())
         tree_structure = "\n".join(tree_lines)
 
         all_summaries = "\n\n".join(file_summaries)

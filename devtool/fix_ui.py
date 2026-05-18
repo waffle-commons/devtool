@@ -20,31 +20,7 @@ from .services.patch_service import Patch, PatchSet, apply_patch, parse_patches
 
 def _render_diff(patch: Patch, base_dir: Path | None = None) -> str:
     """Generate a unified diff string for display."""
-    target = Path(patch.file)
-    if base_dir:
-        target = base_dir / target
-
-    if target.exists():
-        try:
-            original = target.read_text(encoding="utf-8")
-        except Exception:
-            original = patch.search
-    else:
-        original = patch.search
-
-    # Compute a proper unified diff
-    # Build what the file would look like after replacement
-    replaced = (
-        original.replace(patch.search, patch.replace, 1)
-        if patch.search in original
-        else patch.replace
-    )
-    replaced_lines = (
-        replaced.splitlines(keepends=True)
-        if patch.search in original
-        else patch.replace.splitlines(keepends=True)
-    )
-
+    # Compute a proper unified diff between search and replace blocks
     diff_lines = difflib.unified_diff(
         patch.search.splitlines(keepends=True),
         patch.replace.splitlines(keepends=True),

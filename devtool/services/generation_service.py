@@ -15,13 +15,13 @@ from ..interfaces import ILanguageModel
 from ..prompts import (
     commit_prompt,
     docgen_prompt,
+    gen_test_prompt,
     identify_external_calls_prompt,
     pre_review_prompt,
     rag_ask_prompt,
     repo_architect_prompt,
     sec_audit_prompt,
     summarize_file_prompt,
-    testgen_prompt,
 )
 
 
@@ -138,7 +138,7 @@ class GenerationService:
         rag_context: Optional[str] = None,
     ) -> Iterator[str]:
         """Stream unit test generation."""
-        system, user = testgen_prompt(
+        system, user = gen_test_prompt(
             source_code,
             language,
             framework,

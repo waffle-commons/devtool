@@ -8,6 +8,7 @@ Supports RFC 017 multi-provider routing via ModelRoute objects.
 """
 
 from functools import lru_cache
+from typing import cast
 
 from .config import Config, load_config
 from .interfaces import IEmbeddingModel, IIndexStore, ILanguageModel
@@ -37,14 +38,17 @@ def get_language_model(purpose: str = "default") -> ILanguageModel:
 
         return OllamaLanguageModel(config, purpose=purpose)
     else:
-        # OpenAI-compatible provider
+        # OpenAI-compatible provider (has generate/stream methods compatible with ILanguageModel)
         from .utils.llm_client import OpenAIProvider
 
-        return OpenAIProvider(
-            endpoint=route.endpoint or "http://localhost:8000",
-            model=route.model,
-            api_key=route.api_key,
-            timeout=config.request_timeout,
+        return cast(
+            ILanguageModel,
+            OpenAIProvider(
+                endpoint=route.endpoint or "http://localhost:8000",
+                model=route.model,
+                api_key=route.api_key,
+                timeout=config.request_timeout,
+            ),
         )
 
 
@@ -59,14 +63,17 @@ def get_embedding_model() -> IEmbeddingModel:
 
         return OllamaEmbeddingModel(config)
     else:
-        # OpenAI-compatible embedding provider
+        # OpenAI-compatible embedding provider (has embed method compatible with IEmbeddingModel)
         from .utils.llm_client import OpenAIEmbeddingProvider
 
-        return OpenAIEmbeddingProvider(
-            endpoint=route.endpoint or "http://localhost:8000",
-            model=route.model,
-            api_key=route.api_key,
-            timeout=config.request_timeout,
+        return cast(
+            IEmbeddingModel,
+            OpenAIEmbeddingProvider(
+                endpoint=route.endpoint or "http://localhost:8000",
+                model=route.model,
+                api_key=route.api_key,
+                timeout=config.request_timeout,
+            ),
         )
 
 

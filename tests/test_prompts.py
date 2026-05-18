@@ -3,13 +3,13 @@
 from devtool.prompts import (
     commit_prompt,
     docgen_prompt,
+    gen_test_prompt,
     identify_external_calls_prompt,
     pre_review_prompt,
     rag_ask_prompt,
     repo_architect_prompt,
     sec_audit_prompt,
     summarize_file_prompt,
-    testgen_prompt,
 )
 
 
@@ -182,12 +182,12 @@ class TestDocgenPrompt:
 
 
 class TestTestgenPrompt:
-    """Test suite for testgen_prompt (RFC 003)."""
+    """Test suite for gen_test_prompt (RFC 003)."""
 
-    def test_testgen_prompt_returns_tuple(self) -> None:
-        """Test that testgen_prompt returns (system, user) tuple."""
+    def test_gen_test_prompt_returns_tuple(self) -> None:
+        """Test that gen_test_prompt returns (system, user) tuple."""
         code = "def add(a, b):\n    return a + b"
-        result = testgen_prompt(
+        result = gen_test_prompt(
             source_code=code,
             language="python",
             framework="pytest",
@@ -199,10 +199,10 @@ class TestTestgenPrompt:
         assert isinstance(system, str)
         assert isinstance(user, str)
 
-    def test_testgen_prompt_includes_source_code(self) -> None:
+    def test_gen_test_prompt_includes_source_code(self) -> None:
         """Test that source code is included in the prompt."""
         code = "def multiply(a, b): return a * b"
-        system, user = testgen_prompt(
+        system, user = gen_test_prompt(
             source_code=code,
             language="python",
             framework="pytest",
@@ -210,9 +210,9 @@ class TestTestgenPrompt:
 
         assert code in user
 
-    def test_testgen_prompt_mentions_framework(self) -> None:
+    def test_gen_test_prompt_mentions_framework(self) -> None:
         """Test that test framework is mentioned in prompt."""
-        system, user = testgen_prompt(
+        system, user = gen_test_prompt(
             source_code="def test(): pass",
             language="python",
             framework="unittest",

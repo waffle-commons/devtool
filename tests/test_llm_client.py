@@ -13,8 +13,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from devtool.config import Config, ModelRoute
-from devtool.utils.llm_client import (
+# Mark entire module as slow tests
+pytestmark = pytest.mark.slow
+
+from devtool.config import Config, ModelRoute  # noqa: E402
+from devtool.utils.llm_client import (  # noqa: E402
     OllamaEmbeddingProvider,
     OllamaProvider,
     OpenAIEmbeddingProvider,

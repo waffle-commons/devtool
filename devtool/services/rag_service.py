@@ -5,11 +5,14 @@ Depends on IEmbeddingModel and IIndexStore — no direct FAISS or Ollama imports
 
 import subprocess
 from pathlib import Path
-from typing import Callable, Optional
+from typing import TYPE_CHECKING, Callable, Optional
 
 from ..interfaces import IEmbeddingModel, IIndexStore
 from ..utils.path_utils import is_ignored_path
 from .ast_chunker import chunk_file
+
+if TYPE_CHECKING:
+    from ..config import Config
 
 # ── Constants ────────────────────────────────────────────────────────────────
 
@@ -437,7 +440,7 @@ def format_rag_context(results: list[dict[str, str]]) -> str:
 
 def build_index(
     target_dir: str,
-    config: "Config",  # noqa: F821  — kept for signature compat
+    config: "Config",
     *,
     progress_callback: Optional[ProgressCallback] = None,
 ) -> int:
@@ -450,7 +453,7 @@ def build_index(
 
 def update_index(
     target_dir: str,
-    config: "Config",  # noqa: F821
+    config: "Config",
     *,
     progress_callback: Optional[ProgressCallback] = None,
 ) -> tuple[int, int, int]:
@@ -463,7 +466,7 @@ def update_index(
 
 def search(
     query: str,
-    config: "Config",  # noqa: F821
+    config: "Config",
     *,
     target_dir: str = ".",
     top_k: int = 5,

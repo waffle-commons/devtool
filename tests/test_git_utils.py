@@ -5,7 +5,12 @@ from __future__ import annotations
 import subprocess
 from unittest.mock import MagicMock
 
-from devtool.utils.git_utils import (
+import pytest
+
+# Mark entire module as slow tests
+pytestmark = pytest.mark.slow
+
+from devtool.utils.git_utils import (  # noqa: E402
     MAX_DIFF_LENGTH,
     apply_commit,
     branch_exists,

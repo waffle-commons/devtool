@@ -91,11 +91,11 @@ class LinearIndexStore(IIndexStore):
             similarities = cosine_similarity(query_vec, index)[0]
         except ImportError:
             # Manual cosine similarity fallback
-            query_norm = np.linalg.norm(query_vec[0])
+            query_norm_raw = np.linalg.norm(query_vec[0])
             doc_norms = np.linalg.norm(index, axis=1)
 
             # Avoid division by zero
-            query_norm = max(query_norm, 1e-10)
+            query_norm = float(max(float(query_norm_raw), 1e-10))
             doc_norms = np.maximum(doc_norms, 1e-10)
 
             dot_products = np.dot(index, query_vec[0])

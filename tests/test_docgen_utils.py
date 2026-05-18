@@ -14,6 +14,9 @@ from devtool.utils.docgen_utils import (
     run_single_docgen,
 )
 
+# Mark entire module as slow tests
+pytestmark = pytest.mark.slow
+
 
 class TestDocTypeEnum:
     """Test DocType enum."""

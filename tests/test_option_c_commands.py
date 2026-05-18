@@ -3,9 +3,13 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
 from typer.testing import CliRunner
 
 from devtool.main import app
+
+# Mark entire module as slow tests
+pytestmark = pytest.mark.slow
 
 runner = CliRunner()
 
@@ -58,10 +62,12 @@ class TestAnonymizeCommand:
         """Test that anonymization displays the mapping summary."""
         test_file = tmp_path / "test.py"
         # Use a real-length Stripe key and blocklist item
-        test_file.write_text("api_key = sk_live_abcdef123456789012345 and aws = AKIAIOSFODNN7EXAMPLE")
-        
+        test_file.write_text(
+            "api_key = sk_live_abcdef123456789012345 and aws = AKIAIOSFODNN7EXAMPLE"
+        )
+
         result = runner.invoke(app, ["anonymize", str(test_file)])
-        
+
         assert result.exit_code == 0
         # Should show at least some output about anonymization
         assert "Anonymized Content" in result.stdout or "aws" in result.stdout

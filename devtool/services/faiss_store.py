@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+from typing import Any
 
 import faiss
 import numpy as np
@@ -28,7 +29,7 @@ class FaissIndexStore(IIndexStore):
         with open(path / METADATA_FILE, "w", encoding="utf-8") as f:
             json.dump(metadata, f, ensure_ascii=False, indent=2)
 
-    def load(self, store_path: str) -> tuple[object, list[dict]]:
+    def load(self, store_path: str) -> tuple[Any, list[dict]]:
         path = Path(store_path)
         index = faiss.read_index(str(path / INDEX_FILE))
         with open(path / METADATA_FILE, encoding="utf-8") as f:
@@ -36,7 +37,7 @@ class FaissIndexStore(IIndexStore):
         return index, metadata
 
     def search(
-        self, index: object, query_vector: list[float], top_k: int
+        self, index: Any, query_vector: list[float], top_k: int
     ) -> list[tuple[float, int]]:
         query_matrix = np.array([query_vector], dtype=np.float32)
         k = min(top_k, index.ntotal)
@@ -54,6 +55,6 @@ class FaissIndexStore(IIndexStore):
         return (path / INDEX_FILE).exists() and (path / METADATA_FILE).exists()
 
     @staticmethod
-    def reconstruct_vectors(index: object, ids: list[int]) -> list[list[float]]:
+    def reconstruct_vectors(index: Any, ids: list[int]) -> list[list[float]]:
         """Extract specific vectors from a FAISS index by ID."""
         return [index.reconstruct(int(i)).tolist() for i in ids]

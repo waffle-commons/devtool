@@ -216,7 +216,7 @@ class Anonymizer:
             return 0.0
 
         # Count character frequencies
-        frequencies = {}
+        frequencies: dict[str, int] = {}
         for char in value:
             frequencies[char] = frequencies.get(char, 0) + 1
 

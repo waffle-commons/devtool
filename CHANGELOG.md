@@ -21,15 +21,15 @@ All notable changes to devtool are documented in this file.
   - `prompts.py`: 34% → 81% coverage (added 39 tests covering all prompt template functions)
   - `anonymizer.py`: New module with 11 tests (100% coverage)
   - `secrets_scanner.py`: New module with 18 tests (100% coverage)
-- Overall test coverage: 78.4% → **81%+** (370+ tests, up from 281)
+- Overall test coverage: 78.4% → **81%+** (407 tests, up from 281)
 - Extended `GenerationService` with generic `generate_text()` method for flexible LLM invocation
 
 ### Notes
-- All 370+ tests passing
+- All 407 tests passing (254 fast, 153 slow — slow tests deselected by default via `-m 'not slow'`)
 - 81%+ code coverage (threshold: 60%)
 - The `--fix` flag is now fully functional for interactive patch preview and application
 - All three proposed RFCs (013, 014, 015) are now **implemented and tested**
-- Pre-existing linting issues in `main.py` and `patch_service.py` (E402, E741) remain—outside this release scope
+- Pre-existing linting issues resolved: E402 warnings suppressed with `# noqa`, dead variable removed from `fix_ui.py`
 - 11 core commands now available (added `anonymize`, `mock-data`)
 
 ---

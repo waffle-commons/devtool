@@ -98,7 +98,9 @@ def apply_patch(patch: Patch, base_dir: Path | None = None) -> Patch:
     if patch.search not in content:
         # Try with normalized whitespace (strip trailing spaces per line)
         normalized_content = "\n".join(line.rstrip() for line in content.splitlines())
-        normalized_search = "\n".join(line.rstrip() for line in patch.search.splitlines())
+        normalized_search = "\n".join(
+            line.rstrip() for line in patch.search.splitlines()
+        )
         if normalized_search in normalized_content:
             # Apply on normalized then write back
             new_content = normalized_content.replace(

@@ -223,7 +223,7 @@ def docgen_prompt(
 # ── Test Generation ──────────────────────────────────────────────────────────
 
 
-def testgen_prompt(
+def gen_test_prompt(
     source_code: str,
     language: str,
     framework: str,

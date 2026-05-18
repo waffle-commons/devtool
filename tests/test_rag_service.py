@@ -8,6 +8,9 @@ import pytest
 
 from devtool.services.rag_service import VECTORSTORE_DIR, RAGService, _chunk_text
 
+# Mark entire module as slow tests
+pytestmark = pytest.mark.slow
+
 # ── _chunk_text ──────────────────────────────────────────────────────────────
 
 

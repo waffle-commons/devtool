@@ -10,6 +10,9 @@ import pytest
 
 from devtool.services.faiss_store import INDEX_FILE, METADATA_FILE, FaissIndexStore
 
+# Mark entire module as slow tests
+pytestmark = pytest.mark.slow
+
 
 class TestFaissIndexStore:
     """Test FaissIndexStore implementation."""

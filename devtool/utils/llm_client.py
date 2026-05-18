@@ -622,9 +622,9 @@ def testgen_code_stream(
     existing_test_content: Optional[str] = None,
     rag_context: Optional[str] = None,
 ) -> Iterator[str]:
-    from ..prompts import testgen_prompt
+    from ..prompts import gen_test_prompt
 
-    system, user = testgen_prompt(
+    system, user = gen_test_prompt(
         source_code,
         language,
         framework,
