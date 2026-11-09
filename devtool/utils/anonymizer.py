@@ -70,10 +70,7 @@ class Anonymizer:
         if not config_path.exists():
             return []
 
-        try:
-            import tomllib
-        except ImportError:
-            import tomli as tomllib  # type: ignore
+        import tomllib
 
         content = config_path.read_text()
         data = tomllib.loads(content)

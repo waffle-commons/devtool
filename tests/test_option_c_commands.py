@@ -89,7 +89,7 @@ class TestMockDataCommand:
         assert result.exit_code == 1
         assert "not found" in result.stdout.lower()
 
-    @patch("devtool.container.get_generation_service")
+    @patch("devtool.commands.mock_data.get_generation_service")
     def test_mock_data_generates_output(self, mock_gen_service, tmp_path: Path) -> None:
         """Test mock-data command generates synthetic data."""
         schema_file = tmp_path / "schema.sql"
@@ -106,7 +106,7 @@ class TestMockDataCommand:
 
         assert result.exit_code == 0
 
-    @patch("devtool.container.get_generation_service")
+    @patch("devtool.commands.mock_data.get_generation_service")
     def test_mock_data_with_custom_rows(self, mock_gen_service, tmp_path: Path) -> None:
         """Test mock-data with custom row count."""
         schema_file = tmp_path / "schema.sql"
@@ -122,7 +122,7 @@ class TestMockDataCommand:
         # Should have called generate_text with rows=100
         assert mock_service.generate_text.called
 
-    @patch("devtool.container.get_generation_service")
+    @patch("devtool.commands.mock_data.get_generation_service")
     def test_mock_data_with_output_file(self, mock_gen_service, tmp_path: Path) -> None:
         """Test mock-data saves to output file."""
         schema_file = tmp_path / "schema.sql"
@@ -141,7 +141,7 @@ class TestMockDataCommand:
         assert output_file.exists()
         assert "INSERT INTO users VALUES (1);" in output_file.read_text()
 
-    @patch("devtool.container.get_generation_service")
+    @patch("devtool.commands.mock_data.get_generation_service")
     def test_mock_data_handles_generation_failure(
         self, mock_gen_service, tmp_path: Path
     ) -> None:
@@ -164,7 +164,7 @@ class TestSecretsMiddleware:
 
     @patch("devtool.utils.git_utils.has_staged_changes")
     @patch("devtool.utils.git_utils.get_staged_diff")
-    @patch("devtool.container.get_generation_service")
+    @patch("devtool.commands.commit.get_generation_service")
     def test_commit_detects_aws_key_in_diff(
         self, mock_gen_service, mock_get_diff, mock_has_staged, mocker
     ) -> None:
@@ -181,7 +181,7 @@ class TestSecretsMiddleware:
 
     @patch("devtool.utils.git_utils.has_staged_changes")
     @patch("devtool.utils.git_utils.get_staged_diff")
-    @patch("devtool.container.get_generation_service")
+    @patch("devtool.commands.commit.get_generation_service")
     def test_commit_allows_clean_diff(
         self, mock_gen_service, mock_get_diff, mock_has_staged, mocker
     ) -> None:

@@ -115,11 +115,8 @@ keep_alive = "10m"
 # If a specialized model key is missing, it falls back to 'default' model.
 # Each value can be a simple string ("model-name") or a full provider dict (RFC 017).
 #
-
-[inference.default]
-provider = "ollama"
-endpoint = "http://localhost:11434"
-keep_alive = "10m"
+# The [inference.default] table at the top of this file is the active default provider:
+# TOML allows each table only once, so it is not repeated here.
 
 [models]
 default   = "gemma3n:e4b"

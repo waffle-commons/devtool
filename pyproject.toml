@@ -8,12 +8,12 @@ version = "0.1.0-alpha3"
 description = "A privacy-first, local CLI tool powered by Ollama"
 authors = [{name = "AI Developer"}]
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "typer>=0.9.0",
+    "click>=8.1",
     "requests",
     "rich",
-    "tomli; python_version < '3.11'",
     "faiss-cpu",
     "numpy",
     "tree-sitter>=0.21",
@@ -35,7 +35,7 @@ test = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--tb=short -q -m 'not slow'"
+addopts = "--tb=short -q"
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
 ]
@@ -52,8 +52,16 @@ show_missing = true
 skip_covered = false
 
 [tool.black]
-target-version = ["py310", "py311", "py312"]
+target-version = ["py312"]
 line-length = 88
+
+# Explicit rule set: ruff 0.17 widened its defaults, which broke CI on unchanged code.
+# Stricter rules are adopted on purpose, in their own commit (RFC 028, P8).
+[tool.ruff]
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
 
 [tool.isort]
 profile = "black"
