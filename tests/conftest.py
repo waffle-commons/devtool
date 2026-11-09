@@ -6,6 +6,7 @@ so tests never hit the network or filesystem.
 
 from __future__ import annotations
 
+import socket
 from typing import Iterator, Optional
 
 import pytest
@@ -145,19 +146,46 @@ def mock_git(mocker):
     return git
 
 
-# ── Ollama client mocks ─────────────────────────────────────────────────────
+# ── Hermetic test environment (RFC 028 P0) ──────────────────────────────────
 
 
-@pytest.fixture
-def mock_ollama(mocker):
-    """Patch all ollama_client module-level functions."""
-    oc = mocker.patch("devtool.utils.ollama_client")
-    oc.generate_commit_message.return_value = "feat: add new feature"
-    oc.pre_review_code_stream.return_value = iter(["Review: ", "looks good"])
-    oc.sec_audit_stream.return_value = iter(["NO_VULNERABILITIES_FOUND"])
-    oc.testgen_code_stream.return_value = iter(["def test_foo():\n    assert True"])
-    oc.summarize_file.return_value = "- Purpose\n- Components\n- No debt"
-    oc.repo_architect_stream.return_value = iter(["# Architecture\nClean."])
-    oc.get_embedding.return_value = [0.1] * 8
-    oc.stream_generate.return_value = iter(["response"])
-    return oc
+@pytest.fixture(autouse=True)
+def _isolated_home(tmp_path_factory, monkeypatch):
+    """Keep the developer's real HOME, and so ~/.devtool.toml, out of every test."""
+    monkeypatch.setenv("HOME", str(tmp_path_factory.mktemp("home")))
+
+
+def _clear_container_caches() -> None:
+    from devtool import container
+
+    for factory in (
+        container.get_config,
+        container.get_embedding_model,
+        container.get_index_store,
+        container.get_rag_service,
+        container.get_generation_service,
+    ):
+        factory.cache_clear()
+
+
+@pytest.fixture(autouse=True)
+def _fresh_container():
+    """Start every test with an empty DI cache, so no config or service leaks between tests."""
+    _clear_container_caches()
+    yield
+    _clear_container_caches()
+
+
+@pytest.fixture(autouse=True)
+def _no_network(monkeypatch):
+    """Refuse every TCP connection, localhost included: tests must mock each LLM endpoint."""
+    real_connect = socket.socket.connect
+
+    def _guarded(sock: socket.socket, address: object) -> None:
+        if sock.family in (socket.AF_INET, socket.AF_INET6):
+            raise RuntimeError(
+                f"Network access is blocked in tests (tried {address!r}); mock the client instead."
+            )
+        real_connect(sock, address)
+
+    monkeypatch.setattr(socket.socket, "connect", _guarded)
